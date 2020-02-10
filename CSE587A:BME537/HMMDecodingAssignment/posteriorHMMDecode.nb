@@ -1,0 +1,717 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 12.0' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[     28558,        709]
+NotebookOptionsPosition[     22844,        610]
+NotebookOutlinePosition[     23212,        626]
+CellTagsIndexPosition[     23169,        623]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+
+Cell[CellGroupData[{
+Cell["Posterior HMM decoding lab", "Title",
+ CellChangeTimes->{{3.7775685494180183`*^9, 3.777568555822309*^9}, {
+  3.777568613527491*^9, 
+  3.777568614634371*^9}},ExpressionUUID->"fd24cf92-b96a-4692-9afa-\
+5b6bdcac7522"],
+
+Cell["\<\
+This is not due until after the Viterbi decoding lab. Please do not start \
+this lab until you\[CloseCurlyQuote]ve completed that one.\
+\>", "Text",
+ CellChangeTimes->{{3.777568559744164*^9, 
+  3.777568584153348*^9}},ExpressionUUID->"69c7d478-1c0c-4211-8a34-\
+5b4c2a084dd4"],
+
+Cell[CellGroupData[{
+
+Cell["Implement posterior decoding", "Section",
+ CellChangeTimes->{{3.777568604234468*^9, 
+  3.777568619866905*^9}},ExpressionUUID->"9aae25d3-7fe8-4b28-b750-\
+822c7a1b277b"],
+
+Cell[TextData[{
+ "The file input-output and the input-output of the top level decoding \
+function, ",
+ StyleBox["posteriorDecode",
+  FontFamily->"Courier",
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]],
+ ", are the same as for the Viterbi decoding lab. The representations of HMMs \
+is also the same. Instead of the single function ",
+ StyleBox["buildMatrix",
+  FontFamily->"Courier",
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]],
+ " from Viterbi, you will have two: ",
+ StyleBox["buildForwardMatrix",
+  FontFamily->"Courier",
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]],
+ " and ",
+ StyleBox["buildBackwardMatrix",
+  FontFamily->"Courier",
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]],
+ ". You will then combine them inside ",
+ StyleBox["posteriorProbabilities",
+  FontFamily->"Courier",
+  FontSize->14,
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]],
+ StyleBox[".",
+  FontFamily->"Arial",
+  FontSize->14,
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]],
+ " ",
+ StyleBox["posteriorDecode",
+  FontFamily->"Courier",
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]],
+ " calls ",
+ StyleBox["posteriorProbabilities ",
+  FontFamily->"Courier",
+  FontSize->14,
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]],
+ "and uses the result to find the posterior path and output the corresponding \
+state names. "
+}], "Text",
+ CellChangeTimes->{{3.777570965585307*^9, 3.777571016706305*^9}, {
+  3.777571075961907*^9, 3.777571154763042*^9}, {3.777571203369665*^9, 
+  3.777571412390519*^9}, {3.7786736820136414`*^9, 3.7786736896242723`*^9}, {
+  3.7786743692223253`*^9, 3.778674379575478*^9}, {3.7786755701734447`*^9, 
+  3.7786756993278637`*^9}},ExpressionUUID->"b8fa4b73-7f7a-4a89-bdd8-\
+7631a9884aef"],
+
+Cell["\<\
+Because the posterior decoding only cares about the relative probabilities of \
+the states at each time, you can multiple all the forward probabilities for a \
+given observation or all the backward probabilities or both by arbitrary \
+positive constants without changing the path. Thus, you should normalize each \
+column of the forward and backward matrices as you build them. You should \
+also normalize the product of the two, so that at the end of the calculation \
+you have the posterior probabilities the states for each observation.\
+\>", "Text",
+ CellChangeTimes->{{3.777570965585307*^9, 3.777571016706305*^9}, {
+  3.777571075961907*^9, 3.777571154763042*^9}, {3.777571203369665*^9, 
+  3.777571412390519*^9}, {3.7786736820136414`*^9, 3.7786736896242723`*^9}, {
+  3.7786743692223253`*^9, 3.778674379575478*^9}, {3.7786755701734447`*^9, 
+  3.778675690082292*^9}},ExpressionUUID->"e2cbfc7c-b2d7-4209-9f36-\
+f70349a63947"],
+
+Cell[TextData[{
+ "I suggest copying your ",
+ StyleBox["buildMatrix",
+  FontFamily->"Courier",
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]],
+ " from the Viterbi as the basis for ",
+ StyleBox["buildForwardMatrix",
+  FontFamily->"Courier",
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]],
+ ". Aside from renaming variables to be more appropriate, there is only one, \
+very small, substantive change to the way entries are calculated."
+}], "Text",
+ CellChangeTimes->{{3.777572781624592*^9, 
+  3.777572845470173*^9}},ExpressionUUID->"1ac50008-5981-4198-971e-\
+fdf6fc3cbf13"],
+
+Cell[TextData[{
+ "You can then copy ",
+ StyleBox["buildForwardMatrix",
+  FontFamily->"Courier",
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]],
+ " as the basis for ",
+ StyleBox["buildBackwardMatrix",
+  FontFamily->"Courier",
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]],
+ ". Here some substantive changes are required, but the overall structure is \
+the same. Differences include the initialization of the row for the last \
+observation, the fact that you count backwards from the end of the matrix, \
+and the actual calculation of the entries at each time point."
+}], "Text",
+ CellChangeTimes->{{3.777573063716173*^9, 3.777573153583929*^9}, {
+   3.778673754835219*^9, 3.77867381879142*^9}, 
+   3.778675729857724*^9},ExpressionUUID->"8f1f71e5-9f47-47cd-8c79-\
+b5e45cd0c340"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Part 2: Difference between Viterbi and Posterior", "Section",
+ CellChangeTimes->{{3.77868558940906*^9, 
+  3.778685615565186*^9}},ExpressionUUID->"37a0a816-99ac-4bd6-9b73-\
+0e1bd6c08344"],
+
+Cell["\<\
+Does posterior decoding of \[OpenCurlyDoubleQuote]Test/mixed2.fa\
+\[CloseCurlyDoubleQuote] with HMM  \
+\[OpenCurlyDoubleQuote]Test/humanMalaria.hmm\[CloseCurlyDoubleQuote] give a \
+different result than Viterbi decoding? Write and evaluate your code for \
+determining the answer in the cells below.\
+\>", "ItemNumbered",
+ CellChangeTimes->{{3.778685646985794*^9, 
+  3.77868578416854*^9}},ExpressionUUID->"893d528f-ff5e-4327-88b0-\
+bd26c1de44b2"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"hmm", " ", "=", " ", 
+   RowBox[{"readHMMFile", "[", "\"\<Test/humanMalaria.hmm\>\"", "]"}]}], 
+  ";"}]], "Input",
+ CellChangeTimes->{{3.7806694003828773`*^9, 3.780669417599057*^9}},
+ CellLabel->"In[16]:=",ExpressionUUID->"bf0fa190-0cb4-4c46-8299-fea7c879d8e1"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"seq", " ", "=", " ", 
+   RowBox[{"readFasta", "[", "\"\<Test/mixed2.fa\>\"", "]"}]}], 
+  ";"}]], "Input",
+ CellChangeTimes->{{3.780669421355785*^9, 3.780669436546363*^9}, {
+  3.7806695361848497`*^9, 3.78066957226051*^9}},
+ CellLabel->"In[32]:=",ExpressionUUID->"fd2378b2-4931-41c3-857e-f1996a2b1115"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"states", " ", "=", " ", 
+   RowBox[{"readFasta", "[", "\"\<Test/mixed2key.fa\>\"", "]"}]}], 
+  ";"}]], "Input",
+ CellChangeTimes->{{3.781275106688035*^9, 
+  3.7812751203003197`*^9}},ExpressionUUID->"f881520a-dd5c-40b3-9367-\
+4b221f07ccaf"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"supervisedHMMParameterEstimation", "[", 
+   RowBox[{
+    RowBox[{"First", "[", "seq", "]"}], ",", "stateSequence_"}], "]"}], 
+  ":="}]], "Input",
+ CellChangeTimes->{{3.78127509217163*^9, 
+  3.7812751049405117`*^9}},ExpressionUUID->"e792da3c-5b6f-425d-af69-\
+2281eb613c74"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"calculateAccuracy", "[", 
+   RowBox[{
+    RowBox[{"viterbiDecode", "[", 
+     RowBox[{
+      RowBox[{"First", "[", "seq", "]"}], ",", "hmm"}], "]"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"posteriorDecode", "[", 
+     RowBox[{
+      RowBox[{"First", "[", "seq", "]"}], ",", "hmm"}], "]"}]}], "]"}], 
+  " "}]], "Input",
+ CellChangeTimes->{{3.780669438740634*^9, 3.7806694909752913`*^9}},
+ CellLabel->"In[35]:=",ExpressionUUID->"dabe7bf5-5f65-4b99-ba90-c066192bae42"],
+
+Cell[BoxData["175569"], "Output",
+ CellChangeTimes->{3.780669483590592*^9, 3.780669598542801*^9},
+ CellLabel->"Out[35]=",ExpressionUUID->"dfd06c89-ef51-4a6f-9a0e-95b2dd9b33b9"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"N", "[", 
+  RowBox[{"175569", "/", 
+   RowBox[{"Length", "[", 
+    RowBox[{"First", "[", "seq", "]"}], "]"}]}], "]"}]], "Input",
+ CellChangeTimes->{{3.78066960059719*^9, 3.780669611474374*^9}},
+ CellLabel->"In[36]:=",ExpressionUUID->"76c46fed-9ca6-402a-a95b-b53e1f5c8c91"],
+
+Cell[BoxData["1.`"], "Output",
+ CellChangeTimes->{3.7806696121712008`*^9},
+ CellLabel->"Out[36]=",ExpressionUUID->"15032efc-cd75-413e-a942-60463ad20705"]
+}, Open  ]],
+
+Cell["The results are the same", "Text",
+ CellChangeTimes->{{3.780670574754961*^9, 
+  3.780670578684635*^9}},ExpressionUUID->"df3e4e0d-595b-4d49-b320-\
+ac66c154b1c8"],
+
+Cell["\<\
+Use posteriorProbabilities to calculate the state probabilities for the for \
+each state in the decoding \[OpenCurlyDoubleQuote]Test/mixed2.fa\
+\[CloseCurlyDoubleQuote] with HMM  \
+\[OpenCurlyDoubleQuote]Test/humanMalaria.hmm\[CloseCurlyDoubleQuote]. DO NOT \
+PRINT OUT ALL THE POSTERIORS IN THIS NOTEBOOK -- JUST SET A VARIABLE TO IT \
+AND END YOUR LINE WITH A SEMICOLON. How far away from 0.5 does it get (Max \
+absolute difference)? How close to 0.5 does it get (Min absolute difference). \
+Would you say that the algorithm is very confident of its state calls \
+overall, or not very confident?\
+\>", "ItemNumbered",
+ CellChangeTimes->{{3.778685646985794*^9, 3.7786857862452793`*^9}, {
+  3.778685820615184*^9, 3.7786860198384666`*^9}, {3.778686130220071*^9, 
+  3.778686130220216*^9}},ExpressionUUID->"afb62ae8-ef66-4423-80ee-\
+857a65d632a4"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"posteriorProbs", " ", "=", " ", 
+   RowBox[{"posteriorProbabilities", "[", 
+    RowBox[{
+     RowBox[{"First", "[", "seq", "]"}], ",", "hmm"}], "]"}]}], 
+  ";"}]], "Input",
+ CellChangeTimes->{{3.780669617546905*^9, 3.780669648824831*^9}, {
+  3.7806702169648743`*^9, 3.7806702195307083`*^9}},
+ CellLabel->"In[63]:=",ExpressionUUID->"297e77bf-bea0-4c3e-ad3c-92e3729895b6"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"maxAbsDiff", " ", "=", " ", 
+  RowBox[{"Max", "[", 
+   RowBox[{"Abs", "[", 
+    RowBox[{
+     RowBox[{"Flatten", "[", "posteriorProbs", "]"}], "-", ".5"}], "]"}], 
+   "]"}]}]], "Input",
+ CellChangeTimes->{{3.7806698957584352`*^9, 3.78066991772819*^9}, {
+  3.78067023110736*^9, 3.7806702445214443`*^9}},
+ CellLabel->"In[65]:=",ExpressionUUID->"b6f32d49-f13d-4a63-810e-1a5c5c047b9e"],
+
+Cell[BoxData["0.2777777777777778`"], "Output",
+ CellChangeTimes->{{3.780670237892082*^9, 3.7806702470205584`*^9}},
+ CellLabel->"Out[65]=",ExpressionUUID->"90cfe33a-9116-4b73-831c-3f0bc008a9c4"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"minAbsDiff", " ", "=", " ", 
+  RowBox[{"Min", "[", 
+   RowBox[{"Abs", "[", 
+    RowBox[{
+     RowBox[{"Flatten", "[", "posteriorProbs", "]"}], "-", ".5"}], "]"}], 
+   "]"}]}]], "Input",
+ CellChangeTimes->{{3.780670250820528*^9, 3.780670274343739*^9}},
+ CellLabel->"In[66]:=",ExpressionUUID->"354bb315-97d4-48e8-a5ab-d43ab8850b38"],
+
+Cell[BoxData["0.2222222222222222`"], "Output",
+ CellChangeTimes->{3.780670275908388*^9},
+ CellLabel->"Out[66]=",ExpressionUUID->"5a364ade-2793-4500-b1b0-cb3583670d53"]
+}, Open  ]],
+
+Cell["\<\
+The maximum  amount away from .5 is less than .3 meaning it is never more \
+than 80% confident about the state, but the minimum away from .5 is at least \
+.22 so its at least ~70% confident. \
+\>", "Text",
+ CellChangeTimes->{{3.780670292876803*^9, 3.780670338648005*^9}, {
+  3.78067039454255*^9, 3.780670443669812*^9}, {3.780670686118051*^9, 
+  3.780670721178199*^9}},ExpressionUUID->"71a8668a-87e7-4fcd-9deb-\
+27a54d54a636"],
+
+Cell["\<\
+In the Viterbi decoding lab, you created a file \
+\[OpenCurlyDoubleQuote]tweakedHMM.hmm\[CloseCurlyDoubleQuote] to try to get \
+better accuracy than humanMalaria.hmm. Repeat questions 1 and 2 above for \
+that HMM. Do Viterbi and posterior decoding give the same result? How is the \
+decoding more confident or less than for humanMalaria.hmm?\
+\>", "ItemNumbered",
+ CellChangeTimes->{{3.778685646985794*^9, 3.7786857862452793`*^9}, {
+  3.778685820615184*^9, 3.7786860198384666`*^9}, {3.778686130801066*^9, 
+  3.77868613121838*^9}, {3.778686163261738*^9, 3.778686337013248*^9}, {
+  3.778686367533341*^9, 
+  3.778686375912714*^9}},ExpressionUUID->"72ee058b-9e94-432a-9717-\
+74c77b1ecbdc"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"tweakedHMM", " ", "=", " ", 
+   RowBox[{"readHMMFile", "[", "\"\<Test/tweakedHMM.hmm\>\"", "]"}]}], 
+  ";"}]], "Input",
+ CellChangeTimes->{{3.780670467035664*^9, 3.780670483720004*^9}},
+ CellLabel->"In[28]:=",ExpressionUUID->"7bddd2cc-78c0-4353-9f60-0560f1f2ff66"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"tweakedHMM", "[", "\"\<initialStateProbs\>\"", "]"}]], "Input",
+ CellChangeTimes->{{3.781274672903404*^9, 3.781274698477137*^9}},
+ CellLabel->"In[30]:=",ExpressionUUID->"56393f91-5bf2-493e-93f8-f7b9eab2f65f"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"0.5`", ",", "0.5`"}], "}"}]], "Output",
+ CellChangeTimes->{{3.781274681442675*^9, 3.781274698937359*^9}},
+ CellLabel->"Out[30]=",ExpressionUUID->"e10f8500-be0f-40bf-ad61-ccd4db2b1c03"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"calculateAccuracy", "[", 
+   RowBox[{
+    RowBox[{"viterbiDecode", "[", 
+     RowBox[{
+      RowBox[{"First", "[", "seq", "]"}], ",", "tweakedHMM"}], "]"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"posteriorDecode", "[", 
+     RowBox[{
+      RowBox[{"First", "[", "seq", "]"}], ",", "tweakedHMM"}], "]"}]}], "]"}],
+   " "}]], "Input",
+ CellChangeTimes->{{3.7806705221155863`*^9, 3.780670527753677*^9}},
+ CellLabel->"In[69]:=",ExpressionUUID->"9531862a-f7cd-4508-b900-11415f8b22f5"],
+
+Cell[BoxData["148939"], "Output",
+ CellChangeTimes->{3.780670544988226*^9},
+ CellLabel->"Out[69]=",ExpressionUUID->"077aff32-3a4e-4ed9-a5ba-5ead2bed0a19"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"N", "[", 
+  RowBox[{"148939", "/", 
+   RowBox[{"Length", "[", 
+    RowBox[{"First", "[", "seq", "]"}], "]"}]}], "]"}]], "Input",
+ CellChangeTimes->{{3.7806705610079603`*^9, 3.780670563169351*^9}},
+ CellLabel->"In[70]:=",ExpressionUUID->"fe805a95-c4a8-4b7c-8b4e-22ea402fe20a"],
+
+Cell[BoxData["0.8483217424488377`"], "Output",
+ CellChangeTimes->{3.780670564066723*^9},
+ CellLabel->"Out[70]=",ExpressionUUID->"bacd081a-e296-43db-9dc5-46a7310decb7"]
+}, Open  ]],
+
+Cell["\<\
+Using the tweakedHMM, the algorithms are about 85% similar opposed to \
+producing the same output using the original HMM. \
+\>", "Text",
+ CellChangeTimes->{{3.780670585530987*^9, 
+  3.780670620917283*^9}},ExpressionUUID->"90e0a466-3ff8-4e2d-bf0e-\
+9460b02a58cf"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"posteriorProbs", " ", "=", " ", 
+   RowBox[{"posteriorProbabilities", "[", 
+    RowBox[{
+     RowBox[{"First", "[", "seq", "]"}], ",", "tweakedHMM"}], "]"}]}], 
+  ";"}]], "Input",
+ CellChangeTimes->{{3.7806706302216597`*^9, 3.780670632097309*^9}},
+ CellLabel->"In[71]:=",ExpressionUUID->"54d73993-63f6-4a4c-bf06-40c6bc869376"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"maxAbsDiff", " ", "=", " ", 
+  RowBox[{"Max", "[", 
+   RowBox[{"Abs", "[", 
+    RowBox[{
+     RowBox[{"Flatten", "[", "posteriorProbs", "]"}], "-", ".5"}], "]"}], 
+   "]"}]}]], "Input",
+ CellLabel->"In[72]:=",ExpressionUUID->"5d8df580-5ffa-4a93-9c23-e30ac8dc7558"],
+
+Cell[BoxData["0.48249385196179384`"], "Output",
+ CellChangeTimes->{3.7806706534904213`*^9},
+ CellLabel->"Out[72]=",ExpressionUUID->"b16cb020-5aa2-4be3-a9f7-07e0091b9e42"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"minAbsDiff", " ", "=", " ", 
+  RowBox[{"Min", "[", 
+   RowBox[{"Abs", "[", 
+    RowBox[{
+     RowBox[{"Flatten", "[", "posteriorProbs", "]"}], "-", ".5"}], "]"}], 
+   "]"}]}]], "Input",
+ CellChangeTimes->{{3.780670649328793*^9, 3.780670650165805*^9}},
+ CellLabel->"In[73]:=",ExpressionUUID->"51db34e6-4859-4e04-8a33-12a591c9706a"],
+
+Cell[BoxData["3.194456477118024`*^-9"], "Output",
+ CellChangeTimes->{3.7806706554967127`*^9},
+ CellLabel->"Out[73]=",ExpressionUUID->"3b9b0b59-fe50-42bf-be0c-d6b59200c9f9"]
+}, Open  ]],
+
+Cell["\<\
+For some states, the algorithm is very confident with a state probability of \
+almost 1, but others have a value very close to .5 meaning that it\
+\[CloseCurlyQuote]s not confident at all about which state to pick.\
+\>", "Text",
+ CellChangeTimes->{{3.7806706621925173`*^9, 3.7806706755522747`*^9}, {
+  3.780670731514163*^9, 
+  3.7806707784832077`*^9}},ExpressionUUID->"c0999e8a-a317-4b1d-a698-\
+bbd8dcf04ecf"],
+
+Cell["\<\
+Make a file called testHMM7.hmm in the Test directory. Design it so that \
+posterior and Viterbi decoding get different results when you evaluate the \
+following calls. Below that, write a sentence or two explaining how you \
+approached the problem. Hints: (a) you may need more than 2 or 3 states, but \
+it can definitely be done with 4. (b) In designing your HMM, think about the \
+difference between what Viterbi and posterior decoding are trying to do.\
+\>", "ItemNumbered",
+ CellChangeTimes->{{3.778685646985794*^9, 3.7786857862452793`*^9}, {
+  3.778685820615184*^9, 3.7786860198384666`*^9}, {3.778686130801066*^9, 
+  3.77868613121838*^9}, {3.778686163261738*^9, 3.778686337013248*^9}, {
+  3.778686367533341*^9, 3.778686462223977*^9}, {3.778686537697195*^9, 
+  3.778686640814674*^9}},ExpressionUUID->"9821ac5e-cd6c-4dfb-b463-\
+080bb9c96710"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"hmm7", " ", "=", " ", 
+   RowBox[{"readHMMFile", "[", "\"\<Test/testHMM7.hmm\>\"", "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"checkHMMValidity", "[", "hmm7", "]"}]}], "Input",
+ CellChangeTimes->{{3.778684837643849*^9, 3.77868484263581*^9}, {
+  3.780671061357903*^9, 3.7806710624154997`*^9}},
+ CellLabel->
+  "In[121]:=",ExpressionUUID->"8f2f0203-7258-43a0-9d1e-8b4835b90a57"],
+
+Cell[BoxData["True"], "Output",
+ CellChangeTimes->{{3.780670985326475*^9, 3.780671004969479*^9}, {
+  3.780671039617959*^9, 3.7806710754825907`*^9}, {3.7806712646213293`*^9, 
+  3.7806712861323223`*^9}, {3.78067158068496*^9, 3.7806716484694443`*^9}},
+ CellLabel->
+  "Out[122]=",ExpressionUUID->"5ef86f72-b146-4a84-9cff-56382438ad57"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"viterbiDecode", "[", 
+  RowBox[{
+   RowBox[{"{", 
+    RowBox[{
+    "1", ",", "1", ",", "1", ",", "1", ",", "1", ",", "1", ",", "1", ",", "1",
+      ",", "1"}], "}"}], ",", "hmm7"}], "]"}]], "Input",
+ CellChangeTimes->{{3.778686494532498*^9, 3.7786865016442823`*^9}},
+ CellLabel->
+  "In[123]:=",ExpressionUUID->"ba695c55-b38c-42b4-94fe-e327240b7c52"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"\<\"d\"\>", ",", "\<\"a\"\>", ",", "\<\"a\"\>", ",", "\<\"a\"\>", 
+   ",", "\<\"a\"\>", ",", "\<\"a\"\>", ",", "\<\"a\"\>", ",", "\<\"a\"\>", 
+   ",", "\<\"a\"\>"}], "}"}]], "Output",
+ CellChangeTimes->{
+  3.780671077928993*^9, {3.780671288408374*^9, 3.78067131373178*^9}, {
+   3.780671377324729*^9, 3.780671381770792*^9}, {3.780671574067422*^9, 
+   3.780671649797051*^9}},
+ CellLabel->
+  "Out[123]=",ExpressionUUID->"5e4c0366-3488-4a8b-a3db-6f47c2099223"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"posteriorDecode", "[", 
+  RowBox[{
+   RowBox[{"{", 
+    RowBox[{
+    "1", ",", "1", ",", "1", ",", "1", ",", "1", ",", "1", ",", "1", ",", "1",
+      ",", "1"}], "}"}], ",", "hmm7"}], "]"}]], "Input",
+ CellChangeTimes->{{3.7786854971832047`*^9, 3.778685544114296*^9}, {
+  3.778686356213677*^9, 3.778686360988145*^9}},
+ CellLabel->
+  "In[124]:=",ExpressionUUID->"0627504b-6953-48d2-bf78-fd1d09b51809"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"\<\"c\"\>", ",", "\<\"c\"\>", ",", "\<\"a\"\>", ",", "\<\"a\"\>", 
+   ",", "\<\"a\"\>", ",", "\<\"a\"\>", ",", "\<\"a\"\>", ",", "\<\"a\"\>", 
+   ",", "\<\"a\"\>"}], "}"}]], "Output",
+ CellChangeTimes->{
+  3.7806710797172613`*^9, {3.780671290036475*^9, 3.780671308741097*^9}, {
+   3.78067137909933*^9, 3.7806713837550983`*^9}, {3.780671575721558*^9, 
+   3.7806716514322844`*^9}},
+ CellLabel->
+  "Out[124]=",ExpressionUUID->"4f95a7ac-9ad9-489e-b0c7-a4a0acf876c8"]
+}, Open  ]],
+
+Cell["\<\
+To approach the problem, I knew that the switching probabilites and emission \
+probabilites would have to be skewed (if everything were equally likely or \
+close to it, the algorithms would give the same results). Posterior decode \
+considers the switching probabilities in the very first choice because of the \
+backward matrix, so there had to be a more heavily favored state because of \
+the transition probability that wouldn\[CloseCurlyQuote]t happen if we only \
+considered the initial state probabilities and emission probabilities.  \
+\>", "Text",
+ CellChangeTimes->{{3.780671697913515*^9, 
+  3.7806718724681873`*^9}},ExpressionUUID->"70ed0656-a5a3-49e5-9ba5-\
+6b21f460ce93"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Posterior decoding instructions and grading", "Section",
+ CellChangeTimes->{{3.585589085899582*^9, 3.585589086700222*^9}, {
+   3.586022771579047*^9, 3.586022775165971*^9}, {3.589547506333993*^9, 
+   3.589547525506456*^9}, 3.589578378913684*^9, {3.717253881576324*^9, 
+   3.7172538851514263`*^9}, {3.77867422989777*^9, 
+   3.7786742350970573`*^9}},ExpressionUUID->"b2dc4e2c-fcde-499d-b35c-\
+f388a1ae6521"],
+
+Cell["Please turn in your entire Eclipse project.", "Text",
+ CellChangeTimes->CompressedData["
+1:eJxTTMoPSmViYGAQA2IQfUezK/fK1leOvtHrG0H0ng22bSA6I2LPahBdZPBt
+PYiWeldyEESfmFZu+xVId2hpOYPotMgXsSBaMvxpKYjWmh5VDaKXpaysB9Gz
+r71X/QWk1xyV0gbRDer3TwRsf+W4I+fGSRB9/obfqdNAeoHlwgsgWvOlyC0Q
+PV1L7AWIFvtSFDN53yvHbwdu5ILoI9UORSB6k71fJYjeMyO1DizurDwLRMu9
+lFsMoqN2N+4G0af85+8H0bZ8S8+A6HunWq6AaHUljXsgmiHj6WMQvZ6D7ymI
+niE65wuI3rXqCph+aLaNdQqQTt3+jR1Ev5kgLPf00CvHbUaWaiD6yDvp1oeK
+bxy5Pr4D03k3N60D0Zrnf4FpAJ8sz6Y=
+  
+  "],ExpressionUUID->"c342dd2e-0acd-42ae-aa3c-d538b8e106ef"],
+
+Cell[CellGroupData[{
+
+Cell["\<\
+3 points for turning in a fully correct implementation. To get full credit, \
+your implementation must pass all the unit tests. This makes it likely that \
+your implementation is correct but does not guarantee correctness. Partial \
+credit may be assigned for implementations that correctly implement \
+buildBackwardMatrix or posteriorDecode. Partial credit may also be assigned \
+for implementations that  fail a few tests.\
+\>", "Item",
+ CellChangeTimes->{{3.775859915003221*^9, 3.775860040410473*^9}, 
+   3.7786741805677423`*^9, {3.7786742732622547`*^9, 
+   3.77867430278055*^9}},ExpressionUUID->"dad89476-e5d5-4271-b0f4-\
+1b14d36ee23c"],
+
+Cell["\<\
+1 point for answering all the questions and coming with an HMM that gives \
+different outputs from Viterbi and posterior decoding on the provided input..\
+\
+\>", "Item",
+ CellChangeTimes->{{3.775859915003221*^9, 3.7758599597944593`*^9}, 
+   3.775860059058094*^9, {3.7758601317485113`*^9, 3.775860174634942*^9}, {
+   3.7786866972543097`*^9, 
+   3.778686738813332*^9}},ExpressionUUID->"dc9bdb1a-b379-40d9-92d6-\
+eaef2cf1eb3a"]
+}, Open  ]]
+}, Open  ]]
+}, Open  ]]
+},
+WindowSize->{959, 1090},
+WindowMargins->{{Automatic, 476}, {Automatic, 0}},
+Magnification:>1.5 Inherited,
+FrontEndVersion->"12.0 for Mac OS X x86 (64-bit) (April 8, 2019)",
+StyleDefinitions->"Default.nb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[CellGroupData[{
+Cell[580, 22, 220, 4, 146, "Title",ExpressionUUID->"fd24cf92-b96a-4692-9afa-5b6bdcac7522"],
+Cell[803, 28, 284, 6, 88, "Text",ExpressionUUID->"69c7d478-1c0c-4211-8a34-5b4c2a084dd4"],
+Cell[CellGroupData[{
+Cell[1112, 38, 173, 3, 101, "Section",ExpressionUUID->"9aae25d3-7fe8-4b28-b750-822c7a1b277b"],
+Cell[1288, 43, 1793, 53, 295, "Text",ExpressionUUID->"b8fa4b73-7f7a-4a89-bdd8-7631a9884aef"],
+Cell[3084, 98, 936, 14, 260, "Text",ExpressionUUID->"e2cbfc7c-b2d7-4209-9f36-f70349a63947"],
+Cell[4023, 114, 596, 16, 122, "Text",ExpressionUUID->"1ac50008-5981-4198-971e-fdf6fc3cbf13"],
+Cell[4622, 132, 802, 19, 191, "Text",ExpressionUUID->"8f1f71e5-9f47-47cd-8c79-b5e45cd0c340"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[5461, 156, 192, 3, 101, "Section",ExpressionUUID->"37a0a816-99ac-4bd6-9b73-0e1bd6c08344"],
+Cell[5656, 161, 455, 9, 111, "ItemNumbered",ExpressionUUID->"893d528f-ff5e-4327-88b0-bd26c1de44b2"],
+Cell[6114, 172, 296, 6, 46, "Input",ExpressionUUID->"bf0fa190-0cb4-4c46-8299-fea7c879d8e1"],
+Cell[6413, 180, 335, 7, 46, "Input",ExpressionUUID->"fd2378b2-4931-41c3-857e-f1996a2b1115"],
+Cell[6751, 189, 274, 7, 46, "Input",ExpressionUUID->"f881520a-dd5c-40b3-9367-4b221f07ccaf"],
+Cell[7028, 198, 307, 8, 46, "Input",ExpressionUUID->"e792da3c-5b6f-425d-af69-2281eb613c74"],
+Cell[CellGroupData[{
+Cell[7360, 210, 508, 13, 78, "Input",ExpressionUUID->"dabe7bf5-5f65-4b99-ba90-c066192bae42"],
+Cell[7871, 225, 176, 2, 52, "Output",ExpressionUUID->"dfd06c89-ef51-4a6f-9a0e-95b2dd9b33b9"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[8084, 232, 296, 6, 46, "Input",ExpressionUUID->"76c46fed-9ca6-402a-a95b-b53e1f5c8c91"],
+Cell[8383, 240, 153, 2, 52, "Output",ExpressionUUID->"15032efc-cd75-413e-a942-60463ad20705"]
+}, Open  ]],
+Cell[8551, 245, 166, 3, 53, "Text",ExpressionUUID->"df3e4e0d-595b-4d49-b320-ac66c154b1c8"],
+Cell[8720, 250, 854, 14, 237, "ItemNumbered",ExpressionUUID->"afb62ae8-ef66-4423-80ee-857a65d632a4"],
+Cell[9577, 266, 405, 9, 46, "Input",ExpressionUUID->"297e77bf-bea0-4c3e-ad3c-92e3729895b6"],
+Cell[CellGroupData[{
+Cell[10007, 279, 405, 9, 46, "Input",ExpressionUUID->"b6f32d49-f13d-4a63-810e-1a5c5c047b9e"],
+Cell[10415, 290, 193, 2, 52, "Output",ExpressionUUID->"90cfe33a-9116-4b73-831c-3f0bc008a9c4"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[10645, 297, 354, 8, 46, "Input",ExpressionUUID->"354bb315-97d4-48e8-a5ab-d43ab8850b38"],
+Cell[11002, 307, 167, 2, 52, "Output",ExpressionUUID->"5a364ade-2793-4500-b1b0-cb3583670d53"]
+}, Open  ]],
+Cell[11184, 312, 435, 8, 122, "Text",ExpressionUUID->"71a8668a-87e7-4fcd-9deb-27a54d54a636"],
+Cell[11622, 322, 695, 12, 143, "ItemNumbered",ExpressionUUID->"72ee058b-9e94-432a-9717-74c77b1ecbdc"],
+Cell[12320, 336, 299, 6, 46, "Input",ExpressionUUID->"7bddd2cc-78c0-4353-9f60-0560f1f2ff66"],
+Cell[CellGroupData[{
+Cell[12644, 346, 232, 3, 46, "Input",ExpressionUUID->"56393f91-5bf2-493e-93f8-f7b9eab2f65f"],
+Cell[12879, 351, 224, 4, 86, "Output",ExpressionUUID->"e10f8500-be0f-40bf-ad61-ccd4db2b1c03"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[13140, 360, 522, 13, 78, "Input",ExpressionUUID->"9531862a-f7cd-4508-b900-11415f8b22f5"],
+Cell[13665, 375, 154, 2, 52, "Output",ExpressionUUID->"077aff32-3a4e-4ed9-a5ba-5ead2bed0a19"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[13856, 382, 299, 6, 46, "Input",ExpressionUUID->"fe805a95-c4a8-4b7c-8b4e-22ea402fe20a"],
+Cell[14158, 390, 167, 2, 52, "Output",ExpressionUUID->"bacd081a-e296-43db-9dc5-46a7310decb7"]
+}, Open  ]],
+Cell[14340, 395, 272, 6, 88, "Text",ExpressionUUID->"90e0a466-3ff8-4e2d-bf0e-9460b02a58cf"],
+Cell[14615, 403, 361, 8, 46, "Input",ExpressionUUID->"54d73993-63f6-4a4c-bf06-40c6bc869376"],
+Cell[CellGroupData[{
+Cell[15001, 415, 288, 7, 46, "Input",ExpressionUUID->"5d8df580-5ffa-4a93-9c23-e30ac8dc7558"],
+Cell[15292, 424, 170, 2, 52, "Output",ExpressionUUID->"b16cb020-5aa2-4be3-a9f7-07e0091b9e42"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[15499, 431, 354, 8, 46, "Input",ExpressionUUID->"51db34e6-4859-4e04-8a33-12a591c9706a"],
+Cell[15856, 441, 172, 2, 52, "Output",ExpressionUUID->"3b9b0b59-fe50-42bf-be0c-d6b59200c9f9"]
+}, Open  ]],
+Cell[16043, 446, 419, 8, 122, "Text",ExpressionUUID->"c0999e8a-a317-4b1d-a698-bbd8dcf04ecf"],
+Cell[16465, 456, 856, 13, 206, "ItemNumbered",ExpressionUUID->"9821ac5e-cd6c-4dfb-b463-080bb9c96710"],
+Cell[CellGroupData[{
+Cell[17346, 473, 420, 9, 78, "Input",ExpressionUUID->"8f2f0203-7258-43a0-9d1e-8b4835b90a57"],
+Cell[17769, 484, 331, 5, 52, "Output",ExpressionUUID->"5ef86f72-b146-4a84-9cff-56382438ad57"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[18137, 494, 373, 9, 46, "Input",ExpressionUUID->"ba695c55-b38c-42b4-94fe-e327240b7c52"],
+Cell[18513, 505, 496, 10, 52, "Output",ExpressionUUID->"5e4c0366-3488-4a8b-a3db-6f47c2099223"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[19046, 520, 424, 10, 46, "Input",ExpressionUUID->"0627504b-6953-48d2-bf78-fd1d09b51809"],
+Cell[19473, 532, 502, 10, 52, "Output",ExpressionUUID->"4f95a7ac-9ad9-489e-b0c7-a4a0acf876c8"]
+}, Open  ]],
+Cell[19990, 545, 693, 11, 260, "Text",ExpressionUUID->"70ed0656-a5a3-49e5-9ba5-6b21f460ce93"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[20720, 561, 410, 6, 101, "Section",ExpressionUUID->"b2dc4e2c-fcde-499d-b35c-f388a1ae6521"],
+Cell[21133, 569, 559, 10, 53, "Text",ExpressionUUID->"c342dd2e-0acd-42ae-aa3c-d538b8e106ef"],
+Cell[CellGroupData[{
+Cell[21717, 583, 650, 11, 206, "Item",ExpressionUUID->"dad89476-e5d5-4271-b0f4-1b14d36ee23c"],
+Cell[22370, 596, 434, 9, 80, "Item",ExpressionUUID->"dc9bdb1a-b379-40d9-92d6-eaef2cf1eb3a"]
+}, Open  ]]
+}, Open  ]]
+}, Open  ]]
+}
+]
+*)
+

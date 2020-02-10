@@ -1,0 +1,1347 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 9.0' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       157,          7]
+NotebookDataLength[     56436,       1339]
+NotebookOptionsPosition[     47397,       1179]
+NotebookOutlinePosition[     47829,       1198]
+CellTagsIndexPosition[     47786,       1195]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+
+Cell[CellGroupData[{
+Cell["Viterbi HMM decoding assignment", "Title",
+ CellChangeTimes->{{3.5855109621349773`*^9, 3.5855109786207867`*^9}, {
+  3.589537452880289*^9, 3.58953745716191*^9}, {3.589538129491316*^9, 
+  3.5895381327143*^9}, {3.5895844392069798`*^9, 3.589584452050078*^9}, {
+  3.5918315076284404`*^9, 3.59183151468344*^9}, {3.5919578506188755`*^9, 
+  3.59195786464877*^9}, {3.775860761414299*^9, 
+  3.775860762937284*^9}},ExpressionUUID->"ba476164-af22-41f9-87e0-\
+99540cf79935"],
+
+Cell[CellGroupData[{
+
+Cell["Viterbi decoding assignment", "Section",
+ CellChangeTimes->{{3.717253743830409*^9, 
+  3.717253749605256*^9}},ExpressionUUID->"bada36d9-9cc0-4c68-8386-\
+41c448e128c2"],
+
+Cell["\<\
+In this assignment, you will get a single DNA sequence in which subsequences \
+from the human genomes have been randomly concatenated with subsequences from \
+the genome of the malaria parasite, which has a much higher average \
+percentage of As and Ts than human. You will use a simple, two-state HMM \
+based on the difference in frequencies of the nucleotides to try to figure \
+out which segments come from human and which from malaria. To do this,  you \
+will implement the Viterbi algorithm (Part 1). In Part 2, you will manually \
+tweak the HMM we gave you for Part 1 to try to improve the classification \
+accuracy. 
+
+This Eclipse project also contains a notebook, unit test files, and code file \
+for the posterior decoding assignment. You do not have do anything to these \
+for the Viterbi assignment -- their contents will be ignored.\
+\>", "Text",
+ CellChangeTimes->{{3.585512475580336*^9, 3.5855125543489027`*^9}, {
+   3.589537492811056*^9, 3.589537550642374*^9}, 3.5918316120454407`*^9, {
+   3.5918316607314405`*^9, 3.5918317695314407`*^9}, {3.5918318093474407`*^9, 
+   3.5918319728354406`*^9}, {3.59183200986244*^9, 3.5918320236274405`*^9}, {
+   3.5918320547384405`*^9, 3.5918320909164405`*^9}, {3.5918321451554403`*^9, 
+   3.5918322628664403`*^9}, {3.59183236532244*^9, 3.5918324109464407`*^9}, {
+   3.59183246636244*^9, 3.5918325030264406`*^9}, {3.5918332165074406`*^9, 
+   3.59183324513144*^9}, 3.59183332569744*^9, 3.59183336587444*^9, {
+   3.5918333989954405`*^9, 3.59183354149944*^9}, {3.5918337669314404`*^9, 
+   3.5918338033474407`*^9}, {3.5918425460434403`*^9, 3.59184256486744*^9}, {
+   3.5918426319234405`*^9, 3.5918426330514402`*^9}, {3.775582147816554*^9, 
+   3.7755823825697947`*^9}, {3.775582434554904*^9, 3.7755824589861097`*^9}, {
+   3.77585823191076*^9, 3.7758583931336317`*^9}, {3.7758588943584843`*^9, 
+   3.775858898689382*^9}, {3.775860220363394*^9, 
+   3.775860304032456*^9}},ExpressionUUID->"d144f3d8-2828-4dd8-9f3b-\
+33382df56723"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Part 1: Coding the Viterbi algorithm", "Section",
+ CellChangeTimes->{{3.5855110461522093`*^9, 3.58551104688463*^9}, {
+  3.775858417608273*^9, 
+  3.77585842805093*^9}},ExpressionUUID->"a7c0c4fd-2c73-4534-80f6-\
+44c3e6b788b5"],
+
+Cell["\<\
+There are unit tests for all the functions you have to write in the Test \
+directory. hmmTestTiny.nb has a lot of tests using very small input sequences \
+and HMMs designed to test certain expected behaviors. Make sure you can pass \
+all these tests before going on to hmmTestLarge.nb. This checks the number of \
+correct predictions on a the large file of concatenated human and malaria \
+sequences. Your code must pass all the tests.\
+\>", "Text",
+ CellChangeTimes->{{3.775858453338319*^9, 3.7758585134350777`*^9}, {
+  3.7758585451652517`*^9, 3.77585855083423*^9}, {3.775858587905189*^9, 
+  3.775858738234281*^9}, {3.777568643051914*^9, 
+  3.7775686467742443`*^9}},ExpressionUUID->"5bf530b8-67d9-419d-8913-\
+d9f911edd69b"],
+
+Cell[CellGroupData[{
+
+Cell["Input, output, and data structures", "Subsubsection",
+ CellChangeTimes->{{3.58558939219401*^9, 3.5855893941449203`*^9}, {
+  3.589539492078855*^9, 3.5895394993139343`*^9}},
+ FontColor->Automatic,ExpressionUUID->"79482211-7c23-4239-ab6d-d7e23418c52d"],
+
+Cell[TextData[{
+ "Read in the merged human and malaria sequence ",
+ StyleBox["mixed2.fa",
+  FontFamily->"Consolas"],
+ " with ",
+ StyleBox["readFasta[] ",
+  FontFamily->"Consolas"],
+ StyleBox["(code provided in tools.m)",
+  FontFamily->"Arial",
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]],
+ StyleBox[".",
+  FontFamily->"Arial",
+  FontWeight->"Regular"],
+ "  ",
+ StyleBox["readFasta[]",
+  FontFamily->"Consolas"],
+ " reads a fasta file and outputs the nucleotide sequence with A, C, G, T \
+converted to 1, 2, 3, 4. For example, let\[CloseCurlyQuote]s start by making \
+sure the current working directory for evaluation is the directory this \
+notebook is in:"
+}], "ItemNumbered",
+ CellChangeTimes->{{3.5918339715474405`*^9, 3.5918339772254405`*^9}, {
+   3.5918340282764406`*^9, 3.59183411556544*^9}, {3.5918350025244403`*^9, 
+   3.5918350327954407`*^9}, {3.5918355060114403`*^9, 3.59183551739544*^9}, {
+   3.5918364806514406`*^9, 3.5918366501874404`*^9}, {3.5918367225804405`*^9, 
+   3.5918367405234404`*^9}, {3.59183678043544*^9, 3.5918367822194405`*^9}, 
+   3.5918424239674406`*^9, {3.775582523498987*^9, 3.7755825997324867`*^9}, {
+   3.775583230239585*^9, 3.775583256152293*^9}, {3.775583305881714*^9, 
+   3.775583321968129*^9}},ExpressionUUID->"32a1621d-a971-4828-8841-\
+e26f8c4c4191"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"SetDirectory", "[", 
+  RowBox[{"NotebookDirectory", "[", "]"}], "]"}]], "Input",
+ CellLabel->"In[9]:=",ExpressionUUID->"4e693cf2-937a-4218-99c3-00af29ff4f76"],
+
+Cell[BoxData["\<\"/Users/John/Desktop/CSE587A:BME537/HMMDecodingAssignment\"\>\
+"], "Output",
+ CellChangeTimes->{3.775583260193577*^9, 3.775585421661648*^9, 
+  3.775585675863173*^9, 3.78017112759798*^9},
+ CellLabel->"Out[14]=",ExpressionUUID->"63510136-8a41-4a94-91e8-5519db41fa46"]
+}, Open  ]],
+
+Cell[TextData[{
+ "Now a call to ",
+ StyleBox["readFasta[]",
+  FontFamily->"Consolas"],
+ " would look like this:"
+}], "Text",
+ CellChangeTimes->{{3.5918355331864405`*^9, 3.5918355674674406`*^9}, {
+  3.5918367604034405`*^9, 3.59183678886744*^9}, {3.5918413955474405`*^9, 
+  3.59184139609144*^9}, {3.591883161619809*^9, 3.5918831665519247`*^9}, {
+  3.775583340440157*^9, 
+  3.775583342096613*^9}},ExpressionUUID->"9626d2b2-782d-40b8-ae49-\
+3efde6dd56b5"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"observations", " ", "=", " ", 
+  RowBox[{
+  "readFasta", "[", "\"\<Test/veryShortFasta.fa\>\"", "]"}]}]], "Input",
+ CellChangeTimes->{{3.5918369098184404`*^9, 3.5918369265814404`*^9}, {
+  3.59183702316444*^9, 3.5918370250764403`*^9}, {3.775582994904598*^9, 
+  3.775583014568*^9}},
+ CellLabel->"In[15]:=",ExpressionUUID->"ab2ad83a-416c-4fe5-b3d4-64876202810a"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"{", 
+   RowBox[{
+   "1", ",", "4", ",", "3", ",", "1", ",", "4", ",", "4", ",", "4", ",", "3", 
+    ",", "3", ",", "2", ",", "3", ",", "2", ",", "2", ",", "3", ",", "2"}], 
+   "}"}], "}"}]], "Output",
+ CellChangeTimes->{3.775583220243033*^9, 3.775585687111993*^9, 
+  3.780171131850134*^9},
+ CellLabel->"Out[15]=",ExpressionUUID->"862ceb9d-7112-4f0c-a9fe-c61cc6e55c17"]
+}, Open  ]],
+
+Cell["\<\
+Note that fasta files can contain multiple sequences, which is why readFasta \
+returns a list of lists. For this assignment, we use only the first sequence \
+in the file -- if there are others, they are ignored. \
+\>", "Text",
+ CellChangeTimes->{{3.775853751377198*^9, 
+  3.7758538743830957`*^9}},ExpressionUUID->"d3bc160a-c6da-4e32-9516-\
+4164d720e864"],
+
+Cell[TextData[{
+ "Read in the HMM with ",
+ StyleBox["readHMM[]",
+  FontFamily->"Courier",
+  FontSize->14,
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]],
+ StyleBox[" (code provided in tools.m)",
+  FontFamily->"Consolas"],
+ ". ",
+ StyleBox["readHMM[]",
+  FontFamily->"Courier",
+  FontSize->14,
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]],
+ " takes a text file representing an HMM and outputs an hmm object ."
+}], "ItemNumbered",
+ CellChangeTimes->{{3.5918339715474405`*^9, 3.5918339772254405`*^9}, {
+   3.5918340282764406`*^9, 3.59183411556544*^9}, {3.5918350025244403`*^9, 
+   3.5918350327954407`*^9}, {3.5918355060114403`*^9, 3.59183551739544*^9}, 
+   3.5918364806514406`*^9, {3.5918832760080214`*^9, 3.591883287632251*^9}, {
+   3.591883342472457*^9, 3.591883344680726*^9}, {3.7755833679413443`*^9, 
+   3.775583391944777*^9}, {3.775583590740449*^9, 3.775583594339872*^9}, {
+   3.775583631948614*^9, 3.77558374130951*^9}, {3.775583774526002*^9, 
+   3.7755838001343307`*^9}, {3.7755838645203323`*^9, 
+   3.7755840292334127`*^9}, {3.775852412647895*^9, 3.77585243904469*^9}, 
+   3.775856169491165*^9},ExpressionUUID->"1c0c00d6-c2d3-417d-ae9d-\
+8bc0a245aa12"],
+
+Cell[TextData[{
+ "Here\[CloseCurlyQuote]s what a call to ",
+ StyleBox["readHMM[]",
+  FontFamily->"Consolas"],
+ " would look like:"
+}], "Text",
+ CellChangeTimes->{{3.5918355331864405`*^9, 3.5918355674674406`*^9}, 
+   3.5918414020034404`*^9},ExpressionUUID->"d79135b6-47d0-47b9-8d6c-\
+cc2e5b860163"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"hmmObject", " ", "=", " ", 
+  RowBox[{
+  "readHMMFile", "[", "\"\<Test/humanMalaria.hmm\>\"", "]"}]}]], "Input",
+ CellChangeTimes->{{3.775587498461392*^9, 3.775587500708343*^9}, {
+   3.7755875692122793`*^9, 3.77558757067171*^9}, {3.775587681365624*^9, 
+   3.775587692774028*^9}, {3.7756716166025867`*^9, 3.775671633612318*^9}, {
+   3.7756723963472557`*^9, 3.775672404291627*^9}, 3.7757300896089478`*^9, 
+   3.775730388116349*^9, {3.775735045442194*^9, 3.775735047287694*^9}, {
+   3.7757351322697983`*^9, 3.775735139204734*^9}, {3.775735227224449*^9, 
+   3.7757352372278976`*^9}, {3.775735906659534*^9, 3.7757359115671453`*^9}},
+ CellLabel->"In[16]:=",ExpressionUUID->"433862e9-c17b-4745-8672-e2bcf0974f47"],
+
+Cell[BoxData["hmmObject$4378"], "Output",
+ CellChangeTimes->{{3.775735897565775*^9, 3.775735912213787*^9}, 
+   3.775744856735571*^9, 3.7757456363250732`*^9, 3.775745737860461*^9, 
+   3.775748309765933*^9, 3.7757488768396893`*^9, 3.775852448603909*^9, 
+   3.780171135633919*^9},
+ CellLabel->"Out[16]=",ExpressionUUID->"58f7d0ae-c2ca-4ffd-bc1f-852cdb994046"]
+}, Open  ]],
+
+Cell["\<\
+We have provided a function for checking the validity of an HMM object and \
+diagnosing any problems with it. It is a good idea to run this check each \
+time you input an HMM. \
+\>", "Text",
+ CellChangeTimes->{{3.775748896827261*^9, 
+  3.775748940489691*^9}},ExpressionUUID->"2ea2107e-a7a1-44a1-9213-\
+07dba1701e94"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"checkHMMValidity", "[", "hmmObject", "]"}]], "Input",
+ CellChangeTimes->{{3.7757458028732347`*^9, 3.775745804849566*^9}},
+ CellLabel->"In[17]:=",ExpressionUUID->"15353e20-5760-49aa-8dc7-8f5dacfe4971"],
+
+Cell[BoxData["True"], "Output",
+ CellChangeTimes->{3.775745805723548*^9, 3.775748188264328*^9, 
+  3.775748220138534*^9, 3.775748311980427*^9, 3.7757483916803303`*^9, 
+  3.775748518595142*^9, 3.775748746595915*^9, 3.775748880768195*^9, 
+  3.775852458457037*^9, 3.7801711396685543`*^9},
+ CellLabel->"Out[17]=",ExpressionUUID->"aaf52fc6-31c4-4867-a88f-5bd18d1c163d"]
+}, Open  ]],
+
+Cell["\<\
+You can access the component parts of the HMM object like this:\
+\>", "Text",
+ CellChangeTimes->{{3.775736012319449*^9, 
+  3.7757360357945213`*^9}},ExpressionUUID->"91ae5da8-d98e-47fc-a5b1-\
+38e67a6d0790"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"hmmObject", "[", "\"\<states\>\"", "]"}]], "Input",
+ CellChangeTimes->{{3.775736001550755*^9, 3.775736005948669*^9}, {
+  3.7757360386146812`*^9, 3.775736041248711*^9}},
+ CellLabel->"In[19]:=",ExpressionUUID->"75810cf4-c62a-46fc-b977-2193309e235e"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"\<\"M\"\>", ",", "\<\"H\"\>"}], "}"}]], "Output",
+ CellChangeTimes->{
+  3.775736041728012*^9, 3.775745643406057*^9, {3.7801711444934893`*^9, 
+   3.780171146895053*^9}},
+ CellLabel->"Out[19]=",ExpressionUUID->"652211fe-8ca5-4a7c-853e-befa4f7a8977"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"hmmObject", "[", "\"\<initialStateProbs\>\"", "]"}]], "Input",
+ CellChangeTimes->{{3.7757360452916183`*^9, 3.77573607125795*^9}},
+ CellLabel->"In[20]:=",ExpressionUUID->"886d42f8-06f1-40ec-9dfe-d2e15f8fd187"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"0.5`", ",", "0.5`"}], "}"}]], "Output",
+ CellChangeTimes->{3.775736072318524*^9, 3.775745648430106*^9, 
+  3.780171154267524*^9},
+ CellLabel->"Out[20]=",ExpressionUUID->"3d67502b-553d-4f67-b69a-0110f6efc871"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"hmmObject", "[", "\"\<transitionMatrix\>\"", "]"}]], "Input",
+ CellChangeTimes->{{3.775736085428464*^9, 3.775736085430298*^9}},
+ CellLabel->"In[21]:=",ExpressionUUID->"3d615fdc-7b14-435a-85b4-4b7c236021d5"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{
+   RowBox[{"{", 
+    RowBox[{"0.5`", ",", "0.5`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.5`", ",", "0.5`"}], "}"}]}], "}"}]], "Output",
+ CellChangeTimes->{3.775745659908719*^9, 3.7801711564528217`*^9},
+ CellLabel->"Out[21]=",ExpressionUUID->"12e93165-05ab-45df-9a32-9e7368ad8959"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"hmmObject", "[", "\"\<alphabet\>\"", "]"}]], "Input",
+ CellChangeTimes->{{3.775736100845059*^9, 3.775736100847005*^9}},
+ CellLabel->"In[22]:=",ExpressionUUID->"775ccc89-3798-46d2-bda2-0a561ea4ad05"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"\<\"A\"\>", ",", "\<\"C\"\>", ",", "\<\"G\"\>", ",", "\<\"T\"\>"}],
+   "}"}]], "Output",
+ CellChangeTimes->{3.775736102409021*^9, 3.775745670254313*^9, 
+  3.7801711590130587`*^9},
+ CellLabel->"Out[22]=",ExpressionUUID->"fb8aa16b-ce03-496c-8afe-a6f433e5b283"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"hmmObject", "[", "\"\<emissionMatrix\>\"", "]"}]], "Input",
+ CellChangeTimes->{{3.775736113353257*^9, 3.7757361133715076`*^9}},
+ CellLabel->"In[23]:=",ExpressionUUID->"c38d5d8d-98c3-42e1-8e1b-b5c265723ec9"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{
+   RowBox[{"{", 
+    RowBox[{"0.3`", ",", "0.25`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.2`", ",", "0.25`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.2`", ",", "0.25`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.3`", ",", "0.25`"}], "}"}]}], "}"}]], "Output",
+ CellChangeTimes->{3.775745753452444*^9, 3.775748970912871*^9, 
+  3.7801711618051853`*^9},
+ CellLabel->"Out[23]=",ExpressionUUID->"4b1dff10-5033-4880-88bd-319ac412399c"]
+}, Open  ]],
+
+Cell[TextData[{
+ StyleBox["Note",
+  FontWeight->"Bold"],
+ " how the emission matrix is now transposed, relative to the HMM file, so \
+rows correspond to alphabet letters. This makes the coding simpler."
+}], "Text",
+ CellChangeTimes->{{3.775748973984479*^9, 3.775749012700707*^9}, {
+  3.775852489469013*^9, 
+  3.775852493722547*^9}},ExpressionUUID->"548d1455-9d14-4fde-8cf4-\
+be5406219ff4"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"hmm1", " ", "=", " ", 
+  RowBox[{"readHMMFile", "[", "\"\<Test/testHMM1.hmm\>\"", "]"}]}]], "Input",
+ CellChangeTimes->{{3.775750492321579*^9, 3.775750509360147*^9}},
+ CellLabel->
+  "In[170]:=",ExpressionUUID->"8d1100ae-fc6c-4edd-8a22-f85a4c3448fc"],
+
+Cell[BoxData["hmmObject$467791"], "Output",
+ CellChangeTimes->{3.775750511226099*^9, 3.775751057151519*^9, 
+  3.775751118504425*^9, 3.780171176893923*^9, 3.780190543364086*^9},
+ CellLabel->
+  "Out[170]=",ExpressionUUID->"152748c2-3511-4a2d-bf16-e0a3b374f876"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"checkHMMValidity", "[", "hmm1", "]"}]], "Input",
+ CellChangeTimes->{{3.775750534316394*^9, 3.7757505366600018`*^9}},
+ CellLabel->"In[25]:=",ExpressionUUID->"dc10a807-e853-4ed0-92c4-cf29eaf6e82d"],
+
+Cell[BoxData["True"], "Output",
+ CellChangeTimes->{3.7757505376299562`*^9, 3.7757510595757*^9, 
+  3.775751120324615*^9, 3.780171178400833*^9},
+ CellLabel->"Out[25]=",ExpressionUUID->"6bc07306-d627-421f-bc1b-6139387e5e62"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[TextData[{
+ "Implement the Viterbi and traceback algorithm by writing the function ",
+ StyleBox["decode[]",
+  FontFamily->"Consolas"],
+ ". The code file hmmViterbiDecode.m contains stubs for 3 functions:"
+}], "ItemNumbered",
+ CellChangeTimes->{{3.5918361405634403`*^9, 3.5918361491144404`*^9}, {
+  3.5918391996924405`*^9, 3.5918392411004405`*^9}, {3.59183964991444*^9, 
+  3.5918396643634405`*^9}, {3.775852569917316*^9, 3.775852607819972*^9}, {
+  3.775852933521208*^9, 
+  3.775852943450438*^9}},ExpressionUUID->"4fb6d717-c1fd-4644-a2c9-\
+22dcaa55e055"],
+
+Cell[TextData[{
+ StyleBox["buildMatrix[observationSeq_,  hmm_]",
+  FontFamily->"Courier",
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]],
+ " takes a list of integers corresponding to the observation sequence and an \
+hmm object and returns the Viterbi matrix. Note that the matrix is the \
+transpose of the way it was shown in class -- \[OpenCurlyDoubleQuote]rows\
+\[CloseCurlyDoubleQuote] (the inner lists) correspond to observations and \
+columns to states. This makes it much easier to implement."
+}], "SubitemNumbered",
+ CellChangeTimes->{{3.5918361405634403`*^9, 3.5918361491144404`*^9}, {
+  3.5918391996924405`*^9, 3.5918392411004405`*^9}, {3.59183964991444*^9, 
+  3.5918396643634405`*^9}, {3.775852569917316*^9, 3.775852607819972*^9}, {
+  3.775852933521208*^9, 
+  3.775853114815756*^9}},ExpressionUUID->"175e7e49-d031-4a57-8870-\
+7b49b62cd898"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"{", 
+   RowBox[{".5", ",", ".3"}], "}"}], "/", 
+  RowBox[{"Total", "[", 
+   RowBox[{"{", 
+    RowBox[{".5", ",", ".3"}], "}"}], "]"}]}]], "Input",
+ CellChangeTimes->{{3.780177982517641*^9, 3.780177988809802*^9}, {
+  3.780178061960685*^9, 3.780178068435074*^9}, {3.7801783260114822`*^9, 
+  3.780178328792202*^9}},
+ CellLabel->"In[80]:=",ExpressionUUID->"04ab985b-363e-4d95-9542-228cc394948e"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"0.625`", ",", "0.375`"}], "}"}]], "Output",
+ CellChangeTimes->{3.7801779897299757`*^9, 3.780178069070712*^9, 
+  3.780178329119101*^9},
+ CellLabel->"Out[80]=",ExpressionUUID->"7576ba67-83b8-42af-8493-c75780433220"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"matrix1", " ", "=", 
+  RowBox[{"buildMatrix", "[", 
+   RowBox[{
+    RowBox[{"First", "[", 
+     RowBox[{"readFasta", "[", "\"\<Test/veryShortFasta.fa\>\"", "]"}], "]"}],
+     ",", 
+    RowBox[{"readHMMFile", "[", "\"\<Test/humanMalaria.hmm\>\"", "]"}]}], 
+   "]"}], " "}]], "Input",
+ CellLabel->
+  "In[111]:=",ExpressionUUID->"e32eed15-d697-4bc5-ab98-9d5e184a1d56"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{
+   RowBox[{"{", 
+    RowBox[{"0.5454545454545454`", ",", "0.45454545454545453`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.5454545454545454`", ",", "0.4545454545454546`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.4444444444444445`", ",", "0.5555555555555556`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.5454545454545454`", ",", "0.45454545454545453`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.5454545454545454`", ",", "0.4545454545454546`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.5454545454545454`", ",", "0.4545454545454546`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.5454545454545454`", ",", "0.4545454545454546`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.4444444444444445`", ",", "0.5555555555555556`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.4444444444444445`", ",", "0.5555555555555556`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.4444444444444445`", ",", "0.5555555555555556`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.4444444444444445`", ",", "0.5555555555555556`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.4444444444444445`", ",", "0.5555555555555556`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.4444444444444445`", ",", "0.5555555555555556`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.4444444444444445`", ",", "0.5555555555555556`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.4444444444444445`", ",", "0.5555555555555556`"}], "}"}]}], 
+  "}"}]], "Output",
+ CellChangeTimes->{
+  3.780171838137581*^9, {3.7801718966212053`*^9, 3.780171948094798*^9}, 
+   3.780172120353677*^9, {3.780172845190192*^9, 3.780172874091466*^9}, 
+   3.780173832110654*^9, {3.78017388398883*^9, 3.780173936021386*^9}, {
+   3.7801740477319193`*^9, 3.7801740741720247`*^9}, {3.780174131416044*^9, 
+   3.780174150009323*^9}, {3.780174290209209*^9, 3.780174315421155*^9}, 
+   3.7801743634353027`*^9, {3.780174403089712*^9, 3.7801744211956387`*^9}, 
+   3.7801745022157707`*^9, {3.780174681514811*^9, 3.780174697444401*^9}, 
+   3.7801777381425533`*^9, 3.780180380802205*^9},
+ CellLabel->
+  "Out[111]=",ExpressionUUID->"36e48356-7391-4ffb-a6de-669379ab0090"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"matrix1", " ", "=", 
+  RowBox[{"buildMatrix", "[", 
+   RowBox[{
+    RowBox[{"First", "[", 
+     RowBox[{"readFasta", "[", "\"\<Test/veryShortFasta.fa\>\"", "]"}], "]"}],
+     ",", 
+    RowBox[{"readHMMFile", "[", "\"\<Test/humanMalaria.hmm\>\"", "]"}]}], 
+   "]"}], " "}]], "Input",
+ CellChangeTimes->{{3.775853143833928*^9, 3.775853211016843*^9}, {
+  3.775853435231761*^9, 3.775853437725572*^9}, {3.775853884834261*^9, 
+  3.775853918910178*^9}, {3.775853996603304*^9, 3.775854000183873*^9}, {
+  3.775855022950398*^9, 3.775855034368273*^9}},
+ CellLabel->
+  "In[171]:=",ExpressionUUID->"fa6a0136-2d45-4607-828c-624b6eaa2ed6"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{
+   RowBox[{"{", 
+    RowBox[{"0.5454545454545454`", ",", "0.45454545454545453`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.5454545454545454`", ",", "0.4545454545454546`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.4444444444444445`", ",", "0.5555555555555556`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.5454545454545454`", ",", "0.45454545454545453`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.5454545454545454`", ",", "0.4545454545454546`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.5454545454545454`", ",", "0.4545454545454546`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.5454545454545454`", ",", "0.4545454545454546`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.4444444444444445`", ",", "0.5555555555555556`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.4444444444444445`", ",", "0.5555555555555556`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.4444444444444445`", ",", "0.5555555555555556`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.4444444444444445`", ",", "0.5555555555555556`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.4444444444444445`", ",", "0.5555555555555556`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.4444444444444445`", ",", "0.5555555555555556`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.4444444444444445`", ",", "0.5555555555555556`"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0.4444444444444445`", ",", "0.5555555555555556`"}], "}"}]}], 
+  "}"}]], "Output",
+ CellChangeTimes->{3.775855042602906*^9, 3.780190551831155*^9},
+ CellLabel->
+  "Out[171]=",ExpressionUUID->"e73a9837-d22e-4a9a-b6b9-3e1c4a4bec16"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"matrix1", " ", "//", " ", "MatrixForm"}]], "Input",
+ CellChangeTimes->{{3.775855051275775*^9, 3.775855062825694*^9}},
+ CellLabel->
+  "In[172]:=",ExpressionUUID->"36cfc267-6a49-4d43-9720-5697e7a74c31"],
+
+Cell[BoxData[
+ TagBox[
+  RowBox[{"(", "\[NoBreak]", GridBox[{
+     {"0.5454545454545454`", "0.45454545454545453`"},
+     {"0.5454545454545454`", "0.4545454545454546`"},
+     {"0.4444444444444445`", "0.5555555555555556`"},
+     {"0.5454545454545454`", "0.45454545454545453`"},
+     {"0.5454545454545454`", "0.4545454545454546`"},
+     {"0.5454545454545454`", "0.4545454545454546`"},
+     {"0.5454545454545454`", "0.4545454545454546`"},
+     {"0.4444444444444445`", "0.5555555555555556`"},
+     {"0.4444444444444445`", "0.5555555555555556`"},
+     {"0.4444444444444445`", "0.5555555555555556`"},
+     {"0.4444444444444445`", "0.5555555555555556`"},
+     {"0.4444444444444445`", "0.5555555555555556`"},
+     {"0.4444444444444445`", "0.5555555555555556`"},
+     {"0.4444444444444445`", "0.5555555555555556`"},
+     {"0.4444444444444445`", "0.5555555555555556`"}
+    },
+    GridBoxAlignment->{"Columns" -> {{Center}}, "Rows" -> {{Baseline}}},
+    GridBoxSpacings->{"Columns" -> {
+        Offset[0.27999999999999997`], {
+         Offset[0.7]}, 
+        Offset[0.27999999999999997`]}, "Rows" -> {
+        Offset[0.2], {
+         Offset[0.4]}, 
+        Offset[0.2]}}], "\[NoBreak]", ")"}],
+  Function[BoxForm`e$, 
+   MatrixForm[BoxForm`e$]]]], "Output",
+ CellChangeTimes->{3.7758550636978397`*^9, 3.7801905543749533`*^9},
+ CellLabel->
+  "Out[172]//MatrixForm=",ExpressionUUID->"b49f6c0e-7698-4ef0-a885-\
+7683f893a4af"]
+}, Open  ]],
+
+Cell[TextData[{
+ StyleBox["traceback[viterbiMatrix_, hmm_] ",
+  FontFamily->"Courier",
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]],
+ StyleBox["takes the output of ",
+  FontFamily->"Arial",
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]],
+ StyleBox["buildMatrix",
+  FontFamily->"Courier",
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]],
+ StyleBox[" and an HMM object and returns the most likely sequence of states, \
+represented as a list of state numbers.",
+  FontFamily->"Arial",
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]]
+}], "SubitemNumbered",
+ CellChangeTimes->{{3.5918361405634403`*^9, 3.5918361491144404`*^9}, {
+   3.5918391996924405`*^9, 3.5918392411004405`*^9}, {3.59183964991444*^9, 
+   3.5918396643634405`*^9}, {3.775852569917316*^9, 3.775852607819972*^9}, {
+   3.775852933521208*^9, 3.775853110617856*^9}, 3.7758549201825314`*^9, {
+   3.7758549564900293`*^9, 3.775855019074333*^9}, {3.775855081087515*^9, 
+   3.775855081087697*^9}, {3.7758552032117023`*^9, 3.7758552107600393`*^9}, {
+   3.7786747929978952`*^9, 
+   3.7786748212696257`*^9}},ExpressionUUID->"2bee7a1d-8331-48f8-bca2-\
+d9fcb80a9a75"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"traceback", "[", 
+  RowBox[{"matrix1", ",", " ", 
+   RowBox[{"readHMMFile", "[", "\"\<Test/humanMalaria.hmm\>\"", "]"}]}], 
+  "]"}]], "Input",
+ CellChangeTimes->{{3.775855134095895*^9, 3.775855151325829*^9}},
+ CellLabel->
+  "In[174]:=",ExpressionUUID->"a4178f18-1d78-4c48-b3c4-1a06e33a4a5f"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{
+  "1", ",", "1", ",", "2", ",", "1", ",", "1", ",", "1", ",", "1", ",", "2", 
+   ",", "2", ",", "2", ",", "2", ",", "2", ",", "2", ",", "2", ",", "2"}], 
+  "}"}]], "Output",
+ CellChangeTimes->{3.775855188964603*^9, 3.780190559708754*^9},
+ CellLabel->
+  "Out[174]=",ExpressionUUID->"702bd154-df51-4bc4-8735-96bb5daa93ec"]
+}, Open  ]],
+
+Cell[TextData[{
+ StyleBox["viterbiDecode[observationSeq_, hmm_] ",
+  FontFamily->"Courier",
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]],
+ StyleBox["takes a sequence of observations and an HMM object and returns the \
+most likely sequence of states, represented as a list of state names.",
+  FontFamily->"Arial",
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]]
+}], "SubitemNumbered",
+ CellChangeTimes->{{3.5918361405634403`*^9, 3.5918361491144404`*^9}, {
+   3.5918391996924405`*^9, 3.5918392411004405`*^9}, {3.59183964991444*^9, 
+   3.5918396643634405`*^9}, {3.775852569917316*^9, 3.775852607819972*^9}, {
+   3.775852933521208*^9, 3.775853110617856*^9}, 3.7758549201825314`*^9, {
+   3.7758549564900293`*^9, 3.775855019074333*^9}, {3.775855239382224*^9, 
+   3.7758552870477753`*^9}, {3.775855337561533*^9, 
+   3.775855361981043*^9}},ExpressionUUID->"3a75aabc-878c-4f34-8ce1-\
+ed6f7f0514e2"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"viterbiDecode", "[", 
+  RowBox[{
+   RowBox[{"First", "[", 
+    RowBox[{"readFasta", "[", "\"\<Test/veryShortFasta.fa\>\"", "]"}], "]"}], 
+   ",", 
+   RowBox[{"readHMMFile", "[", "\"\<Test/humanMalaria.hmm\>\"", "]"}]}], 
+  "]"}]], "Input",
+ CellLabel->
+  "In[175]:=",ExpressionUUID->"928ae803-fa8e-4d21-9a29-934d5d43b6e4"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"\<\"M\"\>", ",", "\<\"M\"\>", ",", "\<\"H\"\>", ",", "\<\"M\"\>", 
+   ",", "\<\"M\"\>", ",", "\<\"M\"\>", ",", "\<\"M\"\>", ",", "\<\"H\"\>", 
+   ",", "\<\"H\"\>", ",", "\<\"H\"\>", ",", "\<\"H\"\>", ",", "\<\"H\"\>", 
+   ",", "\<\"H\"\>", ",", "\<\"H\"\>", ",", "\<\"H\"\>"}], "}"}]], "Output",
+ CellChangeTimes->{3.775854341806965*^9, 3.775854481808381*^9, 
+  3.775854562574457*^9, 3.7758546098716803`*^9, 3.775854850682087*^9, 
+  3.780190566202105*^9},
+ CellLabel->
+  "Out[175]=",ExpressionUUID->"45e92dbb-0ccf-4753-9d4e-13bcc33de8d0"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["A few hints:", "Subitem",
+ CellChangeTimes->{{3.5918394188754406`*^9, 3.59183950546644*^9}, {
+  3.5918395476274405`*^9, 3.5918396004264402`*^9}, {3.5918396391634407`*^9, 
+  3.5918399091674404`*^9}},ExpressionUUID->"cb9e7d51-30ea-421b-b046-\
+6313576e7120"],
+
+Cell[CellGroupData[{
+
+Cell["\<\
+If you're not sure where to start, read pages 3-6 of the HMM class notes \
+(HMMnotes.pdf).  Work through a toy example like you did with the at-home \
+exercise: given an HMM and short observation sequence, e.g., ACC, compute the \
+Viterbi dynamic programming table.  Then, find the maximum cell in the final \
+column of the table.  Trace back to the source of max in the previous column.\
+\>", "Subsubitem",
+ CellChangeTimes->{{3.5918394188754406`*^9, 3.59183950546644*^9}, {
+   3.5918395476274405`*^9, 3.5918396004264402`*^9}, {3.5918396391634407`*^9, 
+   3.5918399141104403`*^9}, 
+   3.5918424608714404`*^9},ExpressionUUID->"c6d9c399-6fa6-455d-b8db-\
+72e2314dcb91"],
+
+Cell["\<\
+buildMatrix goes through the observation sequence, from first to last,  \
+calculating the Viterbi probabilities. As soon as the  probabilities are \
+calculated for a given observation,  you should normalize them by dividing \
+each entry to by total over all entries. The results are not strictly \
+\[OpenCurlyDoubleQuote]Viterbi\[CloseCurlyDoubleQuote] probabilities, but \
+they are proportional to the Viterbi probabilities within each observation, \
+and that\[CloseCurlyQuote]s all that matters for the traceback. If you don\
+\[CloseCurlyQuote]t normalize, the numbers get very small very fast (in fact, \
+exponentially fast) and you risk numerical underflow.\
+\>", "Subsubitem",
+ CellChangeTimes->{{3.5918394188754406`*^9, 3.59183950546644*^9}, {
+  3.5918395476274405`*^9, 3.5918396004264402`*^9}, {3.5918396391634407`*^9, 
+  3.5918404163444405`*^9}, {3.59184048016444*^9, 3.5918405025474405`*^9}, {
+  3.5918405547074404`*^9, 3.5918407245634403`*^9}, {3.5918407697474403`*^9, 
+  3.5918409336674404`*^9}, {3.5918411103714404`*^9, 3.5918411103804407`*^9}, {
+  3.5918424682074404`*^9, 3.5918424776554403`*^9}, {3.5918836606035624`*^9, 
+  3.5918838756640368`*^9}, {3.59188394656875*^9, 3.591884007319228*^9}, {
+  3.591884045092066*^9, 3.5918841567443247`*^9}, {3.7755807777840548`*^9, 
+  3.7755807926392393`*^9}, {3.775855508279525*^9, 3.77585580567686*^9}, {
+  3.778674546335047*^9, 
+  3.7786745646094923`*^9}},ExpressionUUID->"3e811aea-b5ea-41f2-b65b-\
+be46bba52fba"],
+
+Cell[TextData[{
+ "There is no need to store traceback pointers on the forward pass. ",
+ StyleBox["traceback",
+  FontFamily->"Courier",
+  FontSize->14,
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]],
+ " starts from the end of of the Viterbi matrix with the highest scoring \
+state for the last observation. It then calculates the Viterbi state for the \
+second to last observation by using the Viterbi probabilities for the second \
+to last observation and the transition probabilities (the emissions don\
+\[CloseCurlyQuote]t matter here). And so on backward until the first \
+observation is reached."
+}], "Subsubitem",
+ CellChangeTimes->{{3.5918394188754406`*^9, 3.59183950546644*^9}, {
+  3.5918395476274405`*^9, 3.5918396004264402`*^9}, {3.5918396391634407`*^9, 
+  3.5918404163444405`*^9}, {3.59184048016444*^9, 3.5918405025474405`*^9}, {
+  3.5918405547074404`*^9, 3.5918407245634403`*^9}, {3.5918407697474403`*^9, 
+  3.5918409336674404`*^9}, {3.5918411103714404`*^9, 3.5918411103804407`*^9}, {
+  3.5918424682074404`*^9, 3.5918424776554403`*^9}, {3.5918836606035624`*^9, 
+  3.5918838756640368`*^9}, {3.59188394656875*^9, 3.591884007319228*^9}, {
+  3.591884045092066*^9, 3.5918841567443247`*^9}, {3.7755807777840548`*^9, 
+  3.7755807926392393`*^9}, {3.775855508279525*^9, 3.775855529125126*^9}, {
+  3.7758558142270117`*^9, 3.775855865228866*^9}, {3.775855919589327*^9, 
+  3.775856015303823*^9}, {3.775856271203146*^9, 
+  3.7758562712035027`*^9}},ExpressionUUID->"4509984e-1ffa-43dd-bf69-\
+8fa79a831f58"],
+
+Cell[TextData[{
+ "The most straightforward way to write ",
+ StyleBox["buildMatrix",
+  FontFamily->"Courier",
+  FontSize->14,
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]],
+ " is with two ",
+ StyleBox["For",
+  FontFamily->"Courier",
+  FontSize->14,
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]],
+ " loops, one for the observation index and one for the state index. However, \
+if you want an extra challenge and a more elegant implementation, try doing \
+without a state index. You can do this by using vector operations. Hint: You \
+do not actually need dot products or matrix products for Viterbi. Instead, \
+use ",
+ StyleBox["Times",
+  FontFamily->"Courier",
+  FontSize->14,
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]],
+ " on vectors and matrices. You may also find ",
+ StyleBox["Max,",
+  FontFamily->"Courier",
+  FontSize->14,
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]],
+ " ",
+ StyleBox["Total, ",
+  FontFamily->"Courier",
+  FontSize->14,
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]],
+ StyleBox["and",
+  FontFamily->"Arial",
+  FontSize->14,
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]],
+ StyleBox[" Transpose",
+  FontFamily->"Courier",
+  FontSize->14,
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]],
+ " useful."
+}], "Subsubitem",
+ CellChangeTimes->{{3.5918394188754406`*^9, 3.59183950546644*^9}, {
+  3.5918395476274405`*^9, 3.5918396004264402`*^9}, {3.5918396391634407`*^9, 
+  3.5918404163444405`*^9}, {3.59184048016444*^9, 3.5918405025474405`*^9}, {
+  3.5918405547074404`*^9, 3.5918407245634403`*^9}, {3.5918407697474403`*^9, 
+  3.5918409336674404`*^9}, {3.5918411103714404`*^9, 3.5918411103804407`*^9}, {
+  3.5918424682074404`*^9, 3.5918424776554403`*^9}, {3.5918836606035624`*^9, 
+  3.5918838756640368`*^9}, {3.59188394656875*^9, 3.591884007319228*^9}, {
+  3.591884045092066*^9, 3.5918841567443247`*^9}, {3.7755807777840548`*^9, 
+  3.7755807926392393`*^9}, {3.775855508279525*^9, 3.775855529125126*^9}, {
+  3.7758558142270117`*^9, 3.775855865228866*^9}, {3.775855919589327*^9, 
+  3.775856015303823*^9}, {3.7758562741764593`*^9, 3.775856454767971*^9}, {
+  3.7758565176768103`*^9, 3.775856533311117*^9}, {3.775856633569477*^9, 
+  3.775856677396522*^9}},ExpressionUUID->"da9af75e-9a41-4ef1-8b71-\
+6e7d46342b0e"]
+}, Open  ]]
+}, Open  ]],
+
+Cell[TextData[{
+ "Evaluate the accuracy of the HMM with ",
+ StyleBox["calculateAccuracy[]",
+  FontFamily->"Courier",
+  FontSize->14,
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]],
+ ".  (Code provided in the tools.m file.)  This function takes the state \
+sequence you generated with",
+ StyleBox[" viterbiDecode[]",
+  FontFamily->"Courier",
+  FontSize->14,
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]],
+ " and calculates the number of correctly labeled states.  You should expect \
+some bases to be misattributed, particularly near the transitions from one \
+state to another."
+}], "ItemNumbered",
+ CellChangeTimes->{{3.5918394188754406`*^9, 3.59183950546644*^9}, {
+   3.5918395476274405`*^9, 3.5918396004264402`*^9}, {3.5918396391634407`*^9, 
+   3.5918404163444405`*^9}, {3.59184048016444*^9, 3.5918405025474405`*^9}, {
+   3.5918405547074404`*^9, 3.5918407245634403`*^9}, {3.5918407697474403`*^9, 
+   3.5918409336674404`*^9}, {3.5918411103714404`*^9, 3.59184114132244*^9}, {
+   3.5918411719464407`*^9, 3.5918413147394404`*^9}, {3.5918413671864405`*^9, 
+   3.5918413716114407`*^9}, {3.5918424816394405`*^9, 
+   3.5918424892474403`*^9}, {3.59184289553944*^9, 3.59184290525144*^9}, 
+   3.775580824624956*^9, {3.775856198256732*^9, 3.7758562157367487`*^9}, 
+   3.7758567068596373`*^9},ExpressionUUID->"6e030cc7-7554-414a-9f28-\
+5f3d7d5d38e2"],
+
+Cell[TextData[{
+ "Here\[CloseCurlyQuote]s what a call to ",
+ StyleBox["calculateAccuracy",
+  FontFamily->"Consolas"],
+ StyleBox["[]",
+  FontFamily->"Consolas"],
+ " would look like:"
+}], "Text",
+ CellChangeTimes->{{3.5918355331864405`*^9, 3.5918355674674406`*^9}, {
+   3.5918414020034404`*^9, 3.59184141924444*^9}, 
+   3.5918415311404405`*^9},ExpressionUUID->"1bf8c6c4-ee07-4bf9-8765-\
+67be1a8fcb59"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"calculateAccuracy", "[", 
+   RowBox[{
+    RowBox[{"viterbiDecode", "[", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{"First", "[", 
+       RowBox[{"readFasta", "[", "\"\<Test/mixed2.fa\>\"", "]"}], "]"}], ",", 
+      "\[IndentingNewLine]", 
+      RowBox[{"readHMMFile", "[", "\"\<Test/humanMalaria.hmm\>\"", "]"}]}], 
+     "]"}], ",", "\[IndentingNewLine]", 
+    RowBox[{"First", "[", 
+     RowBox[{"readFasta", "[", "\"\<Test/mixed2key.fa\>\"", "]"}], "]"}]}], 
+   "]"}], " "}]], "Input",
+ CellChangeTimes->{{3.775856851521339*^9, 3.775856931951486*^9}, {
+  3.775856977993351*^9, 3.775856983659891*^9}, {3.775857197120426*^9, 
+  3.77585724584405*^9}},
+ CellLabel->
+  "In[169]:=",ExpressionUUID->"bd16a8e5-40de-433c-bb29-295903f8b82e"],
+
+Cell[BoxData["118389"], "Output",
+ CellChangeTimes->{3.775856934565707*^9, 3.775856990046845*^9, 
+  3.775857103242782*^9, 3.7758572344790277`*^9, 3.775858948907412*^9, 
+  3.7801904518196087`*^9},
+ CellLabel->
+  "Out[169]=",ExpressionUUID->"a7335345-f87e-4ca7-b0d8-dd0cf8e81e04"]
+}, Open  ]],
+
+Cell["The fraction correct can be calculated as", "Text",
+ CellChangeTimes->{{3.5918415816114407`*^9, 3.59184163584344*^9}, {
+   3.7758589744116297`*^9, 3.775859004669426*^9}, 
+   3.777568372364205*^9},ExpressionUUID->"e57d2b2b-26c3-4ed4-b143-\
+86286e301682"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"N", "[", 
+  RowBox[{"118389", " ", "/", " ", 
+   RowBox[{"Length", "[", 
+    RowBox[{"First", "[", 
+     RowBox[{"readFasta", "[", "\"\<Test/mixed2.fa\>\"", "]"}], "]"}], 
+    "]"}]}], "]"}]], "Input",
+ CellChangeTimes->{{3.775859014303232*^9, 3.775859100660928*^9}},
+ CellLabel->
+  "In[168]:=",ExpressionUUID->"ca5182cf-106e-4a92-91df-1e1174419ccd"],
+
+Cell[BoxData["0.6743160808570989`"], "Output",
+ CellChangeTimes->{{3.7758590922385406`*^9, 3.7758591011405783`*^9}, 
+   3.780190440595645*^9},
+ CellLabel->
+  "Out[168]=",ExpressionUUID->"9cb21108-9e97-45a5-8fbd-ce77393e0e14"]
+}, Open  ]]
+}, Open  ]]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Part 2: Playing around with the HMM parameters", "Section",
+ CellChangeTimes->{{3.778674892533436*^9, 3.778674894056171*^9}, {
+  3.7786749405528507`*^9, 
+  3.778674947292885*^9}},ExpressionUUID->"40d3fec2-9cbc-4034-827f-\
+aff2184eeef0"],
+
+Cell[TextData[{
+ "67% correct is pretty good, given that the random expectation is only 50%. \
+But if you look at the HMM we gave you, you will see that it uses very round \
+numbers that can\[CloseCurlyQuote]t possibly be accurate. Play around with \
+the parameters.  Can you improve accuracy of the model? Please make a new \
+.hmm file in the test directory called \[OpenCurlyDoubleQuote]tweakedHMM.hmm\
+\[CloseCurlyDoubleQuote]. In the cells below, run it on ",
+ StyleBox["mixed2.fa",
+  FontFamily->"Courier",
+  FontSize->14,
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]],
+ StyleBox[" ",
+  FontFamily->"Arial",
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]],
+ StyleBox["and calculate the fraction of correctly labeled nucleotides, as \
+was done at the end of Part 1. Below that, please offer a brief comment on \
+the accuracy improvement (if any) and what you did to achieve it.",
+  FontFamily->"Arial",
+  FontSize->14,
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]],
+ StyleBox[" ",
+  FontFamily->"Arial",
+  FontWeight->"Regular",
+  FontColor->RGBColor[0., 0., 0.]]
+}], "Text",
+ CellChangeTimes->{{3.5918418071394405`*^9, 3.5918419052854404`*^9}, {
+  3.59184210683444*^9, 3.59184210994744*^9}, {3.5918424967984405`*^9, 
+  3.5918425110514402`*^9}, {3.775859181517809*^9, 3.775859226572052*^9}, {
+  3.77585931584296*^9, 3.775859432856934*^9}, {3.7786749770062027`*^9, 
+  3.778675176928816*^9}},ExpressionUUID->"5438a6eb-0734-4aaf-a185-\
+7f28899edbe1"],
+
+Cell["Some things to think about as you do this:", "Text",
+ CellChangeTimes->{{3.5918418071394405`*^9, 3.5918419052854404`*^9}, {
+  3.59184210683444*^9, 3.59184210994744*^9}, {3.5918424967984405`*^9, 
+  3.5918425110514402`*^9}, {3.775859181517809*^9, 3.775859226572052*^9}, {
+  3.77585931584296*^9, 3.775859432856934*^9}, {3.7786749770062027`*^9, 
+  3.77867497853907*^9}},ExpressionUUID->"7b7d3838-c1f3-4f22-a110-\
+31a69b050311"],
+
+Cell[CellGroupData[{
+
+Cell["\<\
+What are the true GC and AT percentages in the human and malaria genomes? You \
+may be able to find this by Googling. If you\[CloseCurlyQuote]re feeling \
+ambitious, you can calculate the percent of each nucleotide in the human and \
+malaria sequences we provided for you, by splitting the sequence into it\
+\[CloseCurlyQuote]s human and malaria segments using mixed2key.fa.\
+\>", "ItemNumbered",
+ CellChangeTimes->{{3.775859450912303*^9, 
+  3.775859556084317*^9}},ExpressionUUID->"06225436-8cc0-47c2-b31d-\
+ea9877c78ab7"],
+
+Cell["\<\
+What do you think the length of the contiguous segments of human and malaria \
+are in mixed2.fa? You don\[CloseCurlyQuote]t really have a good way to guess, \
+but think about the average implied by the switching frequency in the HMM we \
+gave you. Does that seem too big or too small? If you\[CloseCurlyQuote]re \
+feeling even a little ambitious, you can calculate it from mixed2key.fa.\
+\>", "ItemNumbered",
+ CellChangeTimes->{{3.775859450912303*^9, 
+  3.775859713112743*^9}},ExpressionUUID->"d2c2186b-eee4-4feb-be1f-\
+d45a3df81078"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"calculateAccuracy", "[", 
+   RowBox[{
+    RowBox[{"viterbiDecode", "[", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{"First", "[", 
+       RowBox[{"readFasta", "[", "\"\<Test/mixed2.fa\>\"", "]"}], "]"}], ",", 
+      "\[IndentingNewLine]", 
+      RowBox[{"readHMMFile", "[", "\"\<Test/tweakedHMM.hmm\>\"", "]"}]}], 
+     "]"}], ",", "\[IndentingNewLine]", 
+    RowBox[{"First", "[", 
+     RowBox[{"readFasta", "[", "\"\<Test/mixed2key.fa\>\"", "]"}], "]"}]}], 
+   "]"}], " "}]], "Input",
+ CellChangeTimes->{{3.780236890480627*^9, 3.7802368928544893`*^9}, {
+  3.780237121730814*^9, 3.780237151360961*^9}},
+ CellLabel->
+  "In[184]:=",ExpressionUUID->"5067452f-6d1f-43ac-a33e-5e3ca6e15fee"],
+
+Cell[BoxData["145100"], "Output",
+ CellChangeTimes->{{3.780236904277566*^9, 3.7802369355108423`*^9}, 
+   3.780237067256188*^9, {3.78023715647672*^9, 3.7802371892171793`*^9}, 
+   3.780237224470201*^9, 3.780237445521625*^9},
+ CellLabel->
+  "Out[184]=",ExpressionUUID->"403557f4-a84f-4239-b18a-389251bddc27"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"N", "[", 
+  RowBox[{"145100", " ", "/", " ", 
+   RowBox[{"Length", "[", 
+    RowBox[{"First", "[", 
+     RowBox[{"readFasta", "[", "\"\<Test/mixed2.fa\>\"", "]"}], "]"}], 
+    "]"}]}], "]"}]], "Input",
+ CellChangeTimes->{{3.7802374634137278`*^9, 3.780237465492885*^9}},
+ CellLabel->
+  "In[185]:=",ExpressionUUID->"fe80e408-8851-4ded-acc7-90082d16af8f"],
+
+Cell[BoxData["0.8264556954815485`"], "Output",
+ CellChangeTimes->{3.780237469591658*^9},
+ CellLabel->
+  "Out[185]=",ExpressionUUID->"c84fe5e8-95b1-4fae-ac65-ebd9f9c28ca4"]
+}, Open  ]],
+
+Cell["\<\
+The GC content in the malaria genome is much less than in the human genome \
+(20 % vs ~40 %). Looking at mixed2key, the switching frequency is \
+significantly less than .5. Changing these two parameters improved accuracy \
+to about 83 %\
+\>", "Text",
+ CellChangeTimes->{{3.780237688934697*^9, 
+  3.780237691448629*^9}},ExpressionUUID->"1e50ffcd-094c-47cc-a2fc-\
+a43777d6c6f3"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Viterbi decoding instructions and grading", "Section",
+ CellChangeTimes->{{3.585589085899582*^9, 3.585589086700222*^9}, {
+   3.586022771579047*^9, 3.586022775165971*^9}, {3.589547506333993*^9, 
+   3.589547525506456*^9}, 3.589578378913684*^9, {3.717253881576324*^9, 
+   3.7172538851514263`*^9}, {3.778674239371229*^9, 
+   3.77867424092941*^9}},ExpressionUUID->"4270e0e6-b535-46cd-95e8-\
+fe4c30f2204c"],
+
+Cell["Please turn in your entire Eclipse project.", "Text",
+ CellChangeTimes->CompressedData["
+1:eJxTTMoPSmViYGAQA2IQfUezK/fK1leOvtHrG0H0ng22bSA6I2LPahBdZPBt
+PYiWeldyEESfmFZu+xVId2hpOYPotMgXsSBaMvxpKYjWmh5VDaKXpaysB9Gz
+r71X/QWk1xyV0gbRDer3TwRsf+W4I+fGSRB9/obfqdNAeoHlwgsgWvOlyC0Q
+PV1L7AWIFvtSFDN53yvHbwdu5ILoI9UORSB6k71fJYjeMyO1DizurDwLRMu9
+lFsMoqN2N+4G0af85+8H0bZ8S8+A6HunWq6AaHUljXsgmiHj6WMQvZ6D7ymI
+niE65wuI3rXqCph+aLaNdQqQTt3+jR1Ev5kgLPf00CvHbUaWaiD6yDvp1oeK
+bxy5Pr4D03k3N60D0Zrnf4FpAJ8sz6Y=
+  "],ExpressionUUID->"623dcf5c-11ef-4931-96c9-2b465762eb51"],
+
+Cell[CellGroupData[{
+
+Cell["\<\
+1 point for turning in code that takes input of the right form and produces \
+output of the right form. This is your \[OpenCurlyDoubleQuote]I didn\
+\[CloseCurlyQuote]t totally blow the assignment off\[CloseCurlyDoubleQuote] \
+point. \
+\>", "Item",
+ CellChangeTimes->{{3.775859915003221*^9, 
+  3.7758599461756353`*^9}},ExpressionUUID->"5208ab3b-8a4b-49bb-8883-\
+9961f556879a"],
+
+Cell["\<\
+3 points for turning in a fully correct implementation. To get full credit, \
+your implementation must pass all the unit tests. This makes it likely that \
+your implementation is correct but does not guarantee correctness. Partial \
+credit may be assigned for implementations that correctly implement \
+buildMatrix or traceback. Partial credit may also be assigned for \
+implementations that  fail a few tests.\
+\>", "Item",
+ CellChangeTimes->{{3.775859915003221*^9, 3.775860040410473*^9}, 
+   3.7786741805677423`*^9},ExpressionUUID->"ee0470cc-38c6-49db-b206-\
+e58930e98939"],
+
+Cell[TextData[{
+ " 1 point for coding style (things such as capitalization and full, \
+descriptive names) and legibility, including indentation, line breaks, and \
+comments. Use of global variables, i.e. variables that are not protected by ",
+ StyleBox["Module",
+  FontFamily->"Courier"],
+ ", ",
+ StyleBox["Block",
+  FontFamily->"Courier"],
+ ", or ",
+ StyleBox["With",
+  FontFamily->"Courier"],
+ " is considered very bad style. You must get all the correctness points in \
+order to be eligible for the style point."
+}], "Item",
+ CellChangeTimes->{{3.775859915003221*^9, 3.7758599597944593`*^9}, {
+  3.775860059058094*^9, 3.7758600671599207`*^9}, {3.7758600973215513`*^9, 
+  3.775860118254092*^9}},ExpressionUUID->"dc086444-c517-4cb3-91a2-\
+55d1349ecc77"],
+
+Cell["\<\
+1 point for turning in a HMM .model file that substantially improves the \
+accuracy of classifying the human and malaria sequences.\
+\>", "Item",
+ CellChangeTimes->{{3.775859915003221*^9, 3.7758599597944593`*^9}, 
+   3.775860059058094*^9, {3.7758601317485113`*^9, 
+   3.775860174634942*^9}},ExpressionUUID->"0fbb2bf0-b763-4300-ac75-\
+d48a9484a13e"]
+}, Open  ]]
+}, Open  ]]
+}, Open  ]]
+},
+WindowSize->{1037, 1107},
+WindowMargins->{{0, Automatic}, {Automatic, 0}},
+PrintingCopies->1,
+PrintingPageRange->{1, Automatic},
+ShowSelection->True,
+Magnification->1.5,
+FrontEndVersion->"12.0 for Mac OS X x86 (64-bit) (April 8, 2019)",
+StyleDefinitions->"Default.nb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[CellGroupData[{
+Cell[579, 22, 467, 7, 146, "Title",ExpressionUUID->"ba476164-af22-41f9-87e0-99540cf79935"],
+Cell[CellGroupData[{
+Cell[1071, 33, 172, 3, 101, "Section",ExpressionUUID->"bada36d9-9cc0-4c68-8386-41c448e128c2"],
+Cell[1246, 38, 1980, 30, 398, "Text",ExpressionUUID->"d144f3d8-2828-4dd8-9f3b-33382df56723"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[3263, 73, 230, 4, 101, "Section",ExpressionUUID->"a7c0c4fd-2c73-4534-80f6-44c3e6b788b5"],
+Cell[3496, 79, 734, 12, 191, "Text",ExpressionUUID->"5bf530b8-67d9-419d-8913-d9f911edd69b"],
+Cell[CellGroupData[{
+Cell[4255, 95, 255, 3, 67, "Subsubsection",ExpressionUUID->"79482211-7c23-4239-ab6d-d7e23418c52d"],
+Cell[4513, 100, 1303, 30, 143, "ItemNumbered",ExpressionUUID->"32a1621d-a971-4828-8841-e26f8c4c4191"],
+Cell[CellGroupData[{
+Cell[5841, 134, 182, 3, 46, "Input",ExpressionUUID->"4e693cf2-937a-4218-99c3-00af29ff4f76"],
+Cell[6026, 139, 282, 4, 52, "Output",ExpressionUUID->"63510136-8a41-4a94-91e8-5519db41fa46"]
+}, Open  ]],
+Cell[6323, 146, 451, 11, 53, "Text",ExpressionUUID->"9626d2b2-782d-40b8-ae49-3efde6dd56b5"],
+Cell[CellGroupData[{
+Cell[6799, 161, 383, 7, 46, "Input",ExpressionUUID->"ab2ad83a-416c-4fe5-b3d4-64876202810a"],
+Cell[7185, 170, 408, 9, 52, "Output",ExpressionUUID->"862ceb9d-7112-4f0c-a9fe-c61cc6e55c17"]
+}, Open  ]],
+Cell[7608, 182, 364, 7, 122, "Text",ExpressionUUID->"d3bc160a-c6da-4e32-9516-4164d720e864"],
+Cell[7975, 191, 1185, 27, 80, "ItemNumbered",ExpressionUUID->"1c0c00d6-c2d3-417d-ae9d-8bc0a245aa12"],
+Cell[9163, 220, 297, 8, 53, "Text",ExpressionUUID->"d79135b6-47d0-47b9-8d6c-cc2e5b860163"],
+Cell[CellGroupData[{
+Cell[9485, 232, 730, 11, 46, "Input",ExpressionUUID->"433862e9-c17b-4745-8672-e2bcf0974f47"],
+Cell[10218, 245, 356, 5, 52, "Output",ExpressionUUID->"58f7d0ae-c2ca-4ffd-bc1f-852cdb994046"]
+}, Open  ]],
+Cell[10589, 253, 326, 7, 88, "Text",ExpressionUUID->"2ea2107e-a7a1-44a1-9213-07dba1701e94"],
+Cell[CellGroupData[{
+Cell[10940, 264, 224, 3, 46, "Input",ExpressionUUID->"15353e20-5760-49aa-8dc7-8f5dacfe4971"],
+Cell[11167, 269, 363, 5, 52, "Output",ExpressionUUID->"aaf52fc6-31c4-4867-a88f-5bd18d1c163d"]
+}, Open  ]],
+Cell[11545, 277, 215, 5, 53, "Text",ExpressionUUID->"91ae5da8-d98e-47fc-a5b1-38e67a6d0790"],
+Cell[CellGroupData[{
+Cell[11785, 286, 271, 4, 46, "Input",ExpressionUUID->"75810cf4-c62a-46fc-b977-2193309e235e"],
+Cell[12059, 292, 287, 6, 52, "Output",ExpressionUUID->"652211fe-8ca5-4a7c-853e-befa4f7a8977"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[12383, 303, 232, 3, 46, "Input",ExpressionUUID->"886d42f8-06f1-40ec-9dfe-d2e15f8fd187"],
+Cell[12618, 308, 247, 5, 52, "Output",ExpressionUUID->"3d67502b-553d-4f67-b69a-0110f6efc871"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[12902, 318, 230, 3, 46, "Input",ExpressionUUID->"3d615fdc-7b14-435a-85b4-4b7c236021d5"],
+Cell[13135, 323, 328, 8, 52, "Output",ExpressionUUID->"12e93165-05ab-45df-9a32-9e7368ad8959"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[13500, 336, 222, 3, 46, "Input",ExpressionUUID->"775ccc89-3798-46d2-bda2-0a561ea4ad05"],
+Cell[13725, 341, 298, 6, 52, "Output",ExpressionUUID->"fb8aa16b-ce03-496c-8afe-a6f433e5b283"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[14060, 352, 230, 3, 46, "Input",ExpressionUUID->"c38d5d8d-98c3-42e1-8e1b-b5c265723ec9"],
+Cell[14293, 357, 487, 13, 52, "Output",ExpressionUUID->"4b1dff10-5033-4880-88bd-319ac412399c"]
+}, Open  ]],
+Cell[14795, 373, 389, 9, 88, "Text",ExpressionUUID->"548d1455-9d14-4fde-8cf4-be5406219ff4"],
+Cell[CellGroupData[{
+Cell[15209, 386, 273, 5, 46, "Input",ExpressionUUID->"8d1100ae-fc6c-4edd-8a22-f85a4c3448fc"],
+Cell[15485, 393, 259, 4, 52, "Output",ExpressionUUID->"152748c2-3511-4a2d-bf16-e0a3b374f876"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[15781, 402, 219, 3, 46, "Input",ExpressionUUID->"dc10a807-e853-4ed0-92c4-cf29eaf6e82d"],
+Cell[16003, 407, 221, 3, 52, "Output",ExpressionUUID->"6bc07306-d627-421f-bc1b-6139387e5e62"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[16261, 415, 557, 11, 80, "ItemNumbered",ExpressionUUID->"4fb6d717-c1fd-4644-a2c9-22dcaa55e055"],
+Cell[16821, 428, 864, 16, 125, "SubitemNumbered",ExpressionUUID->"175e7e49-d031-4a57-8870-7b49b62cd898"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[17722, 449, 426, 10, 46, "Input",ExpressionUUID->"04ab985b-363e-4d95-9542-228cc394948e"],
+Cell[18151, 461, 253, 5, 52, "Output",ExpressionUUID->"7576ba67-83b8-42af-8493-c75780433220"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[18441, 471, 389, 10, 78, "Input",ExpressionUUID->"e32eed15-d697-4bc5-ab98-9d5e184a1d56"],
+Cell[18833, 483, 2152, 44, 177, "Output",ExpressionUUID->"36e48356-7391-4ffb-a6de-669379ab0090"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[21022, 532, 648, 14, 78, "Input",ExpressionUUID->"fa6a0136-2d45-4607-828c-624b6eaa2ed6"],
+Cell[21673, 548, 1630, 36, 177, "Output",ExpressionUUID->"e73a9837-d22e-4a9a-b6b9-3e1c4a4bec16"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[23340, 589, 224, 4, 46, "Input",ExpressionUUID->"36cfc267-6a49-4d43-9720-5697e7a74c31"],
+Cell[23567, 595, 1410, 32, 428, "Output",ExpressionUUID->"b49f6c0e-7698-4ef0-a885-7683f893a4af"]
+}, Open  ]],
+Cell[24992, 630, 1166, 27, 91, "SubitemNumbered",ExpressionUUID->"2bee7a1d-8331-48f8-bca2-d9fcb80a9a75"],
+Cell[CellGroupData[{
+Cell[26183, 661, 315, 7, 46, "Input",ExpressionUUID->"a4178f18-1d78-4c48-b3c4-1a06e33a4a5f"],
+Cell[26501, 670, 360, 8, 52, "Output",ExpressionUUID->"702bd154-df51-4bc4-8735-96bb5daa93ec"]
+}, Open  ]],
+Cell[26876, 681, 916, 18, 91, "SubitemNumbered",ExpressionUUID->"3a75aabc-878c-4f34-8ce1-ed6f7f0514e2"],
+Cell[CellGroupData[{
+Cell[27817, 703, 346, 9, 78, "Input",ExpressionUUID->"928ae803-fa8e-4d21-9a29-934d5d43b6e4"],
+Cell[28166, 714, 578, 10, 52, "Output",ExpressionUUID->"45e92dbb-0ccf-4753-9d4e-13bcc33de8d0"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[28781, 729, 261, 4, 40, "Subitem",ExpressionUUID->"cb9e7d51-30ea-421b-b046-6313576e7120"],
+Cell[CellGroupData[{
+Cell[29067, 737, 677, 11, 148, "Subsubitem",ExpressionUUID->"c6d9c399-6fa6-455d-b8db-72e2314dcb91"],
+Cell[29747, 750, 1478, 22, 176, "Subsubitem",ExpressionUUID->"3e811aea-b5ea-41f2-b65b-be46bba52fba"],
+Cell[31228, 774, 1516, 26, 148, "Subsubitem",ExpressionUUID->"4509984e-1ffa-43dd-bf69-8fa79a831f58"],
+Cell[32747, 802, 2317, 60, 176, "Subsubitem",ExpressionUUID->"da9af75e-9a41-4ef1-8b71-6e7d46342b0e"]
+}, Open  ]]
+}, Open  ]],
+Cell[35091, 866, 1367, 28, 174, "ItemNumbered",ExpressionUUID->"6e030cc7-7554-414a-9f28-5f3d7d5d38e2"],
+Cell[36461, 896, 399, 11, 53, "Text",ExpressionUUID->"1bf8c6c4-ee07-4bf9-8765-67be1a8fcb59"],
+Cell[CellGroupData[{
+Cell[36885, 911, 777, 18, 140, "Input",ExpressionUUID->"bd16a8e5-40de-433c-bb29-295903f8b82e"],
+Cell[37665, 931, 278, 5, 52, "Output",ExpressionUUID->"a7335345-f87e-4ca7-b0d8-dd0cf8e81e04"]
+}, Open  ]],
+Cell[37958, 939, 259, 4, 53, "Text",ExpressionUUID->"e57d2b2b-26c3-4ed4-b143-86286e301682"],
+Cell[CellGroupData[{
+Cell[38242, 947, 374, 9, 46, "Input",ExpressionUUID->"ca5182cf-106e-4a92-91df-1e1174419ccd"],
+Cell[38619, 958, 225, 4, 52, "Output",ExpressionUUID->"9cb21108-9e97-45a5-8fbd-ce77393e0e14"]
+}, Open  ]]
+}, Open  ]]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[38905, 969, 242, 4, 101, "Section",ExpressionUUID->"40d3fec2-9cbc-4034-827f-aff2184eeef0"],
+Cell[39150, 975, 1491, 33, 251, "Text",ExpressionUUID->"5438a6eb-0734-4aaf-a185-7f28899edbe1"],
+Cell[40644, 1010, 429, 6, 53, "Text",ExpressionUUID->"7b7d3838-c1f3-4f22-a110-31a69b050311"],
+Cell[CellGroupData[{
+Cell[41098, 1020, 532, 9, 143, "ItemNumbered",ExpressionUUID->"06225436-8cc0-47c2-b31d-ea9877c78ab7"],
+Cell[41633, 1031, 544, 9, 143, "ItemNumbered",ExpressionUUID->"d2c2186b-eee4-4feb-be1f-d45a3df81078"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[42214, 1045, 729, 17, 140, "Input",ExpressionUUID->"5067452f-6d1f-43ac-a33e-5e3ca6e15fee"],
+Cell[42946, 1064, 305, 5, 52, "Output",ExpressionUUID->"403557f4-a84f-4239-b18a-389251bddc27"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[43288, 1074, 376, 9, 46, "Input",ExpressionUUID->"fe80e408-8851-4ded-acc7-90082d16af8f"],
+Cell[43667, 1085, 171, 3, 52, "Output",ExpressionUUID->"c84fe5e8-95b1-4fae-ac65-ebd9f9c28ca4"]
+}, Open  ]],
+Cell[43853, 1091, 386, 8, 122, "Text",ExpressionUUID->"1e50ffcd-094c-47cc-a2fc-a43777d6c6f3"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[44276, 1104, 406, 6, 101, "Section",ExpressionUUID->"4270e0e6-b535-46cd-95e8-fe4c30f2204c"],
+Cell[44685, 1112, 556, 9, 53, "Text",ExpressionUUID->"623dcf5c-11ef-4931-96c9-2b465762eb51"],
+Cell[CellGroupData[{
+Cell[45266, 1125, 385, 8, 80, "Item",ExpressionUUID->"5208ab3b-8a4b-49bb-8883-9961f556879a"],
+Cell[45654, 1135, 585, 10, 174, "Item",ExpressionUUID->"ee0470cc-38c6-49db-b206-e58930e98939"],
+Cell[46242, 1147, 754, 18, 143, "Item",ExpressionUUID->"dc086444-c517-4cb3-91a2-55d1349ecc77"],
+Cell[46999, 1167, 358, 7, 80, "Item",ExpressionUUID->"0fbb2bf0-b763-4300-ac75-d48a9484a13e"]
+}, Open  ]]
+}, Open  ]]
+}, Open  ]]
+}
+]
+*)
+
